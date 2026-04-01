@@ -15,6 +15,9 @@ import com.trendhive.arsample.presentation.ui.components.ImportDialog
 import com.trendhive.arsample.presentation.ui.components.MenuIcon
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ARUiState
+import org.jetbrains.compose.resources.stringResource
+import arsample.composeapp.generated.resources.Res
+import arsample.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,18 +52,18 @@ fun ARScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AR Scene") },
+                title = { Text(stringResource(Res.string.ar_scene)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(ArrowBackIcon, contentDescription = "Back")
+                        Icon(ArrowBackIcon, contentDescription = stringResource(Res.string.back))
                     }
                 },
                 actions = {
                     TextButton(onClick = { showImportDialog = true }) {
-                        Text("Import")
+                        Text(stringResource(Res.string.import))
                     }
                     IconButton(onClick = { showObjectList = true }) {
-                        Icon(MenuIcon, contentDescription = "Object List")
+                        Icon(MenuIcon, contentDescription = stringResource(Res.string.object_list))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -79,7 +82,7 @@ fun ARScreen(
             PlatformARView(
                 modifier = Modifier.fillMaxSize(),
                 placedObjects = uiState.placedObjects,
-                onModelPlaced = { _, x, y, z ->
+                onModelPlaced = { _, x, y, z, scale ->
                     uiState.selectedObjectId?.let { selectedId ->
                         onObjectPlaced(selectedId, x, y, z)
                     }
@@ -115,7 +118,7 @@ fun ARScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
             ) {
                 Text(
-                    text = "${uiState.placedObjects.size} objects",
+                    text = "${uiState.placedObjects.size} ${stringResource(Res.string.objects)}",
                     modifier = Modifier
                         .clickable { showPlacedObjects = true }
                         .padding(8.dp),
@@ -137,13 +140,13 @@ fun ARScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = selectedObject?.name ?: "Selected: ${selectedId.take(8)}…",
+                            text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
                             modifier = Modifier.weight(1f)
                         )
                         Button(
                             onClick = { showObjectList = true },
                         ) {
-                            Text("Objects")
+                            Text(stringResource(Res.string.objects))
                         }
                     }
                 }
@@ -205,14 +208,14 @@ fun AvailableObjectsList(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Select Object",
+            text = stringResource(Res.string.select_object),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         if (objects.isEmpty()) {
             Text(
-                text = "No imported objects yet",
+                text = stringResource(Res.string.no_imported_objects),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -223,7 +226,7 @@ fun AvailableObjectsList(
                     supportingContent = { Text(obj.modelType.name) },
                     trailingContent = {
                         if (obj.id == selectedObjectId) {
-                            Text("Selected", color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(Res.string.selected), color = MaterialTheme.colorScheme.primary)
                         }
                     },
                     modifier = Modifier
@@ -233,7 +236,7 @@ fun AvailableObjectsList(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Tap an object to select it, then tap on a plane to place it.",
+                text = stringResource(Res.string.tap_to_place),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -251,14 +254,14 @@ fun PlacedObjectsList(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Placed Objects",
+            text = stringResource(Res.string.placed_objects),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         if (placedObjects.isEmpty()) {
             Text(
-                text = "No objects placed yet",
+                text = stringResource(Res.string.no_placed_objects),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -271,7 +274,7 @@ fun PlacedObjectsList(
                     },
                     trailingContent = {
                         TextButton(onClick = { onRemove(obj.objectId) }) {
-                            Text("Remove")
+                            Text(stringResource(Res.string.remove))
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

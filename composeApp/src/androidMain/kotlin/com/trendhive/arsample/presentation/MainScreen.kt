@@ -96,7 +96,7 @@ fun MainScreen(
                     ARView(
                         modifier = Modifier.fillMaxSize(),
                         modelPathToLoad = selectedModelPath,
-                        onModelPlaced = { modelPath, posX, posY, posZ ->
+                        onModelPlaced = { modelPath, posX, posY, posZ, scale ->
                             // Find the object ID from the path
                             val obj = objectListUiState.objects.find { it.modelUri == modelPath }
                             obj?.let {

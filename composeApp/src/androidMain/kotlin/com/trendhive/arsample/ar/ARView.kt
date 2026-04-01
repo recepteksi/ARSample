@@ -2,6 +2,7 @@ package com.trendhive.arsample.ar
 
 import android.util.Log
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -14,33 +15,42 @@ import com.trendhive.arsample.domain.model.PlacedObject
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.max
+import kotlin.math.min
 
 private const val TAG = "ARView"
 
 // Hit test configuration constants
-private const val HIT_TEST_MIN_DISTANCE = 0.1f // Minimum distance in meters
-private const val HIT_TEST_MAX_DISTANCE = 10.0f // Maximum distance in meters
-private const val HIT_TEST_MIN_CONFIDENCE = 0.5f // Minimum plane tracking confidence
-private const val TAP_DEBOUNCE_TIME_MS = 300L // Minimum time between taps in milliseconds
+private const val HIT_TEST_MIN_DISTANCE = 0.1f
+private const val HIT_TEST_MAX_DISTANCE = 10.0f
+private const val HIT_TEST_MIN_CONFIDENCE = 0.5f
+private const val TAP_DEBOUNCE_TIME_MS = 300L
+
+// Scale configuration constants
+private const val DEFAULT_SCALE = 0.3f
+private const val MIN_SCALE = 0.1f
+private const val MAX_SCALE = 5.0f
 
 @Composable
 fun ARView(
     modifier: Modifier = Modifier,
     placedObjects: List<PlacedObject> = emptyList(),
-    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float) -> Unit,
+    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
-    modelPathToLoad: String? = null
+    modelPathToLoad: String? = null,
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
 ) {
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
-    val currentNodes = remember { mutableMapOf<String, ModelNode>() } // key: placedObjectId
-    var lastTapTime by remember { mutableStateOf(0L) } // For tap debouncing
+    val currentNodes = remember { mutableMapOf<String, ModelNode>() }
+    var lastTapTime by remember { mutableStateOf(0L) }
+    var selectedNodeId by remember { mutableStateOf<String?>(null) }
+    var currentScale by remember { mutableStateOf(1f) }
+    var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
 
-    /**
-     * Normalize model file location to file:// URI format
-     */
     fun normalizeModelLocation(location: String): String {
         return when {
             location.startsWith("file://") -> location
@@ -49,9 +59,6 @@ fun ARView(
         }
     }
 
-    /**
-     * Validate model path before attempting to place it
-     */
     fun isValidModelPath(path: String?): Boolean {
         if (path.isNullOrBlank()) {
             Log.w(TAG, "Model path is null or blank")
@@ -72,37 +79,29 @@ fun ARView(
         return true
     }
 
-    /**
-     * Filter hit results based on distance and plane tracking confidence
-     */
     fun filterHitResults(hitResults: List<HitResult>): List<HitResult> {
         return hitResults.filter { hit ->
             val trackable = hit.trackable
             
-            // Only accept hits on planes
             if (trackable !is Plane) {
                 return@filter false
             }
             
-            // Check if plane is being tracked
             if (trackable.trackingState != TrackingState.TRACKING) {
                 Log.d(TAG, "Plane not tracking, state: ${trackable.trackingState}")
                 return@filter false
             }
             
-            // Calculate distance from camera
             val pose = hit.hitPose
             val distance = Math.sqrt(
                 (pose.tx() * pose.tx() + pose.ty() * pose.ty() + pose.tz() * pose.tz()).toDouble()
             ).toFloat()
             
-            // Filter by distance range
             if (distance < HIT_TEST_MIN_DISTANCE || distance > HIT_TEST_MAX_DISTANCE) {
                 Log.d(TAG, "Hit test distance out of range: $distance meters")
                 return@filter false
             }
             
-            // Check plane subsumed status (if plane is merged into another)
             if (trackable.subsumedBy != null) {
                 Log.d(TAG, "Plane is subsumed by another plane")
                 return@filter false
@@ -110,42 +109,38 @@ fun ARView(
             
             true
         }.sortedBy { hit ->
-            // Sort by distance, closest first
             val pose = hit.hitPose
             pose.tx() * pose.tx() + pose.ty() * pose.ty() + pose.tz() * pose.tz()
         }
     }
 
-    /**
-     * Attempt to retrieve the current ARCore frame safely
-     */
     fun getARFrameSafely(sceneView: ARSceneView): Frame? {
         return try {
-            // Check if AR session is active
             val session = sceneView.session
             if (session == null) {
                 Log.w(TAG, "AR session is not initialized")
                 return null
             }
             
-            // Check session tracking state
-            val camera = sceneView.arSession?.currentFrame?.camera
-            if (camera?.trackingState != TrackingState.TRACKING) {
-                Log.w(TAG, "AR camera not tracking, state: ${camera?.trackingState}")
+            val frame = sceneView.frame
+            if (frame == null) {
+                Log.w(TAG, "AR frame is not available")
                 return null
             }
             
-            // Get frame
-            sceneView.frame
+            val camera = frame.camera
+            if (camera.trackingState != TrackingState.TRACKING) {
+                Log.w(TAG, "AR camera not tracking, state: ${camera.trackingState}")
+                return null
+            }
+            
+            frame
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get AR frame: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Handle tap debouncing to prevent rapid consecutive placements
-     */
     fun shouldProcessTap(currentTime: Long): Boolean {
         val timeSinceLastTap = currentTime - lastTapTime
         return if (timeSinceLastTap >= TAP_DEBOUNCE_TIME_MS) {
@@ -157,11 +152,9 @@ fun ARView(
         }
     }
 
-    // Sync placed objects with scene nodes
     LaunchedEffect(placedObjects, arSceneView) {
         val view = arSceneView ?: return@LaunchedEffect
 
-        // Remove nodes that are no longer in the list
         val objectIds = placedObjects.map { it.objectId }.toSet()
         val idsToRemove = currentNodes.keys.filter { it !in objectIds }
         idsToRemove.forEach { id ->
@@ -171,13 +164,10 @@ fun ARView(
             currentNodes.remove(id)
         }
 
-        // Add or update nodes from the list
         placedObjects.forEach { obj ->
             if (!currentNodes.containsKey(obj.objectId)) {
-                // In SceneView 2.x, we use ModelNode for 3D models
                 val modelLocation = normalizeModelLocation(obj.arObjectId)
 
-                // Load model asynchronously to avoid UI blocking
                 try {
                     val modelInstance = withContext(Dispatchers.IO) {
                         try {
@@ -196,20 +186,22 @@ fun ARView(
                     if (modelInstance != null) {
                         val modelNode = ModelNode(modelInstance).apply {
                             position = Position(obj.position.x, obj.position.y, obj.position.z)
+                            scale = Scale(obj.scale, obj.scale, obj.scale)
                         }
                         view.addChildNode(modelNode)
                         currentNodes[obj.objectId] = modelNode
-                        Log.d(TAG, "Model loaded successfully: ${obj.arObjectId}")
+                        Log.d(TAG, "Model loaded: ${obj.arObjectId} with scale ${obj.scale}")
                     } else {
-                        Log.e(TAG, "Failed to load model: modelInstance is null for ${obj.arObjectId}")
+                        Log.e(TAG, "Failed to load model: ${obj.arObjectId}")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error loading model ${obj.arObjectId}: ${e.message}", e)
                 }
             } else {
-                // Update position if needed
-                currentNodes[obj.objectId]?.position =
-                    Position(obj.position.x, obj.position.y, obj.position.z)
+                currentNodes[obj.objectId]?.let { node ->
+                    node.position = Position(obj.position.x, obj.position.y, obj.position.z)
+                    node.scale = Scale(obj.scale, obj.scale, obj.scale)
+                }
             }
         }
     }
@@ -231,70 +223,92 @@ fun ARView(
                     }
                 }
 
-                onTouchEvent = { e, _ ->
+                scaleGestureDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    override fun onScale(detector: ScaleGestureDetector): Boolean {
+                        selectedNodeId?.let { nodeId ->
+                            currentNodes[nodeId]?.let { node ->
+                                val newScale = min(MAX_SCALE, max(MIN_SCALE, currentScale * detector.scaleFactor))
+                                currentScale = newScale
+                                node.scale = Scale(newScale, newScale, newScale)
+                                Log.d(TAG, "Scaling object $nodeId to $newScale")
+                            }
+                        }
+                        return true
+                    }
+                    
+                    override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                        selectedNodeId = currentNodes.entries.firstOrNull()?.key
+                        selectedNodeId?.let { nodeId ->
+                            currentNodes[nodeId]?.let { node ->
+                                currentScale = node.scale.x
+                            }
+                        }
+                        return true
+                    }
+                    
+                    override fun onScaleEnd(detector: ScaleGestureDetector) {
+                        selectedNodeId?.let { nodeId ->
+                            onObjectScaleChanged(nodeId, currentScale)
+                            Log.d(TAG, "Scale ended for $nodeId with scale $currentScale")
+                        }
+                    }
+                })
+
+                onTouchEvent = touchEvent@{ e, _ ->
+                    scaleGestureDetector?.onTouchEvent(e)
+                    
+                    if (scaleGestureDetector?.isInProgress == true) {
+                        return@touchEvent true
+                    }
+                    
                     if (e.action == MotionEvent.ACTION_UP) {
                         val currentTime = System.currentTimeMillis()
                         
-                        // Debounce rapid taps
                         if (!shouldProcessTap(currentTime)) {
-                            return@onTouchEvent true
+                            return@touchEvent true
                         }
                         
-                        // Validate that a model is selected before attempting placement
                         if (!isValidModelPath(modelPathToLoad)) {
                             Log.w(TAG, "Cannot place object: no valid model selected")
-                            return@onTouchEvent true
+                            return@touchEvent true
                         }
                         
-                        try {
-                            // Safely retrieve the AR frame
-                            val frame = getARFrameSafely(this)
-                            if (frame == null) {
-                                Log.w(TAG, "Cannot perform hit test: AR frame unavailable")
-                                return@onTouchEvent true
-                            }
-                            
-                            // Perform hit test
-                            val hitResults = try {
-                                frame.hitTest(e.x, e.y)
-                            } catch (ex: Exception) {
-                                Log.e(TAG, "Hit test failed: ${ex.message}", ex)
-                                return@onTouchEvent true
-                            }
-                            
-                            if (hitResults.isEmpty()) {
-                                Log.d(TAG, "No surfaces detected at touch location. Try moving the device to scan for surfaces.")
-                                return@onTouchEvent true
-                            }
-                            
-                            // Filter hit results based on quality and distance
-                            val validHits = filterHitResults(hitResults)
-                            
-                            if (validHits.isEmpty()) {
-                                Log.d(TAG, "No valid planes found at touch location after filtering")
-                                return@onTouchEvent true
-                            }
-                            
-                            // Use the best (closest, highest confidence) hit result
-                            val bestHit = validHits.first()
-                            val plane = bestHit.trackable as Plane
-                            val pose = bestHit.hitPose
-                            
-                            // Log placement details for debugging
-                            Log.d(
-                                TAG,
-                                "Placing model on ${plane.type} plane at position: " +
-                                "x=${pose.tx()}, y=${pose.ty()}, z=${pose.tz()}, " +
-                                "plane extent: ${plane.extentX}x${plane.extentZ}"
-                            )
-                            
-                            // Notify placement with validated path
-                            modelPathToLoad?.let { path ->
-                                onModelPlaced(path, pose.tx(), pose.ty(), pose.tz())
-                            }
-                            
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Unexpected error during object placement: ${e.message}", e)
+                        val frame = getARFrameSafely(this)
+                        if (frame == null) {
+                            Log.w(TAG, "Cannot perform hit test: AR frame unavailable")
+                            return@touchEvent true
+                        }
+                        
+                        val hitResults = try {
+                            frame.hitTest(e.x, e.y)
+                        } catch (ex: Exception) {
+                            Log.e(TAG, "Hit test failed: ${ex.message}", ex)
+                            emptyList()
+                        }
+                        
+                        if (hitResults.isEmpty()) {
+                            Log.d(TAG, "No surfaces detected")
+                            return@touchEvent true
+                        }
+                        
+                        val validHits = filterHitResults(hitResults)
+                        
+                        if (validHits.isEmpty()) {
+                            Log.d(TAG, "No valid planes found")
+                            return@touchEvent true
+                        }
+                        
+                        val bestHit = validHits.first()
+                        val plane = bestHit.trackable as Plane
+                        val pose = bestHit.hitPose
+                        
+                        Log.d(
+                            TAG,
+                            "Placing model on ${plane.type} plane at (${pose.tx()}, ${pose.ty()}, ${pose.tz()}) with scale $DEFAULT_SCALE"
+                        )
+                        
+                        modelPathToLoad?.let { path ->
+                            onModelPlaced(path, pose.tx(), pose.ty(), pose.tz(), DEFAULT_SCALE)
                         }
                     }
                     true

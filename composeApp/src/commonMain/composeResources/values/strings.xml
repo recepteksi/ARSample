@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AR Sample</string>
+    <string name="my_objects">My Objects</string>
+    <string name="ar_scene">AR Scene</string>
+    <string name="back">Back</string>
+    <string name="import">Import</string>
+    <string name="object_list">Object List</string>
+    <string name="no_objects_yet">No objects yet</string>
+    <string name="tap_to_import">Tap + to import a 3D model</string>
+    <string name="start_ar">Start AR</string>
+    <string name="delete">Delete</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="objects_count">%d objects</string>
+    <string name="select_object">Select Object</string>
+    <string name="no_imported_objects">No imported objects yet</string>
+    <string name="selected">Selected</string>
+    <string name="selected_id">Selected: %s</string>
+    <string name="tap_to_place">Tap an object to select it, then tap on a plane to place it.</string>
+    <string name="placed_objects">Placed Objects</string>
+    <string name="no_placed_objects">No objects placed yet</string>
+    <string name="remove">Remove</string>
+    <string name="objects">Objects</string>
+    <string name="object_id">Object %s</string>
+    <string name="position">Position: (%1$s, %2$s, %3$s)</string>
+    <string name="import_model">Import 3D Model</string>
+    <string name="model_name">Model Name</string>
+    <string name="format">Format</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_occurred">An error occurred</string>
+</resources>

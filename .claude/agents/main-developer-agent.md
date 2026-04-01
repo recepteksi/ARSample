@@ -20,7 +20,16 @@ Design & Analysis Agent'ın tasarımına göre kod geliştirmek, Android ve iOS 
 
 ## Sorumluluklar
 
+> **Not**: Bu agent Halleder projelerinden öğrenilen Clean Architecture best practice'leri ile zenginleştirilmiştir. Kotlin Multiplatform için optimize edilmiş Flutter-inspired pattern'ler kullanılır.
+
 ### 1. Domain Layer (DDD)
+
+**Katman Kuralları:**
+- ✅ Hiçbir dış dependency içermez (sadece Kotlin stdlib)
+- ✅ Business logic bu katmanda yaşar
+- ✅ Repository interface'leri burada tanımlanır (implementation data layer'da)
+- ✅ Value Objects ile validation yapılır
+- ✅ Use Case interface'leri burada tanımlanır
 
 **Base Classes (Flutter-inspired pattern):**
 ```kotlin
@@ -815,3 +824,381 @@ composeApp/src/
         ├── ARSessionManager.kt
         └── ARViewWrapper.swift
 ```
+
+---
+
+## 🚀 Best Practices (Halleder'den Öğrenilenler)
+
+### 1. Use Case Implementation Pattern
+
+**✅ DO - İyi Örnek:**
+```kotlin
+class CreateFeatureUseCase(
+    private val repository: FeatureRepository,
+    private val validator: FeatureValidator
+) : CreateFeatureUseCaseInterface {
+    
+    override suspend fun invoke(input: CreateFeatureInput): Result<Feature> {
+        // 1. Input validation
+        val nameResult = FeatureName.create(input.name)
+        if (nameResult.isFailure) {
+            return Result.failure(nameResult.exceptionOrNull()!!)
+        }
+        
+        // 2. Business rules check
+        val existingFeature = repository.findByName(input.name)
+        if (existingFeature.isSuccess && existingFeature.getOrNull() != null) {
+            return Result.failure(ValidationException("Feature already exists"))
+        }
+        
+        // 3. Execute operation
+        return repository.create(input)
+    }
+}
+```
+
+**❌ DON'T - Kötü Örnek:**
+```kotlin
+class CreateFeatureUseCase(private val repository: FeatureRepository) {
+    // ❌ Result<T> yerine exception throw
+    // ❌ Value Object validation yok
+    // ❌ Business rule check yok
+    suspend fun execute(name: String): Feature {
+        if (name.isEmpty()) throw IllegalArgumentException()
+        return repository.create(name)
+    }
+}
+```
+
+### 2. Repository Implementation Pattern
+
+**✅ DO - Mapper ile DTO dönüşümü:**
+```kotlin
+class ARObjectRepositoryImpl(
+    private val localDataSource: ARObjectLocalDataSource,
+    private val fileStorage: ModelFileStorage,
+    private val mapper: ARObjectMapper
+) : ARObjectRepository {
+    
+    override suspend fun getAllObjects(): Result<List<ARObject>> {
+        return try {
+            val dtos = localDataSource.getAllObjects()
+            val models = dtos.map { mapper.toModel(it) }
+            Result.success(models)
+        } catch (e: Exception) {
+            Result.failure(StorageException("Failed to load: ${e.message}"))
+        }
+    }
+    
+    override suspend fun importObject(
+        uri: String,
+        name: String,
+        modelType: ModelType
+    ): Result<ARObject> {
+        return try {
+            // 1. Copy file to app storage
+            val localUri = fileStorage.copyToAppStorage(uri)
+            
+            // 2. Create domain entity
+            val arObject = ARObject(
+                id = UUID.randomUUID().toString(),
+                name = ObjectName.create(name).getOrThrow(),
+                modelUri = ModelUri.create(localUri).getOrThrow(),
+                modelType = modelType,
+                createdAt = System.currentTimeMillis()
+            )
+            
+            // 3. Convert to DTO and save
+            val dto = mapper.toDTO(arObject)
+            localDataSource.save(dto)
+            
+            Result.success(arObject)
+        } catch (e: Exception) {
+            Result.failure(StorageException("Import failed: ${e.message}"))
+        }
+    }
+}
+```
+
+### 3. Mapper Best Practices
+
+**✅ DO - Null-safe dönüşüm:**
+```kotlin
+class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
+    override fun toDTO(model: ARObject): ARObjectDTO {
+        return ARObjectDTO(
+            id = model.id,
+            name = model.name.value,  // Value Object'ten çıkar
+            modelUri = model.modelUri.value,
+            modelType = model.modelType.name,
+            thumbnailUri = model.thumbnailUri,  // Nullable
+            createdAt = model.createdAt,
+            lastPlacedAt = model.lastPlacedAt
+        )
+    }
+    
+    override fun toModel(dto: ARObjectDTO): ARObject {
+        return ARObject(
+            id = dto.id,
+            name = ObjectName.create(dto.name).getOrThrow(),  // Validate!
+            modelUri = ModelUri.create(dto.modelUri).getOrThrow(),
+            modelType = ModelType.valueOf(dto.modelType),
+            thumbnailUri = dto.thumbnailUri,
+            createdAt = dto.createdAt,
+            lastPlacedAt = dto.lastPlacedAt
+        )
+    }
+    
+    // Bonus: Partial update helper
+    fun updateModel(existing: ARObject, dto: ARObjectDTO): ARObject {
+        return existing.copy(
+            name = ObjectName.create(dto.name).getOrElse { existing.name },
+            lastPlacedAt = dto.lastPlacedAt ?: existing.lastPlacedAt
+        )
+    }
+}
+```
+
+### 4. ViewModel State Management
+
+**✅ DO - Immutable state, sealed class:**
+```kotlin
+sealed class ObjectListState {
+    object Loading : ObjectListState()
+    data class Success(val objects: List<ARObject>) : ObjectListState()
+    data class Error(val message: String) : ObjectListState()
+}
+
+class ObjectListViewModel(
+    private val getAllObjectsUseCase: GetAllObjectsUseCase,
+    private val importObjectUseCase: ImportObjectUseCase
+) : ViewModel() {
+    
+    private val _state = MutableStateFlow<ObjectListState>(ObjectListState.Loading)
+    val state: StateFlow<ObjectListState> = _state.asStateFlow()
+    
+    init {
+        loadObjects()
+    }
+    
+    fun loadObjects() {
+        viewModelScope.launch {
+            _state.value = ObjectListState.Loading
+            
+            val result = getAllObjectsUseCase.invoke(Unit)
+            _state.value = result.fold(
+                onSuccess = { ObjectListState.Success(it) },
+                onFailure = { ObjectListState.Error(it.message ?: "Unknown error") }
+            )
+        }
+    }
+    
+    fun importObject(uri: String, name: String, modelType: ModelType) {
+        viewModelScope.launch {
+            val input = ImportObjectInput(uri, name, modelType)
+            val result = importObjectUseCase.invoke(input)
+            
+            result.fold(
+                onSuccess = { loadObjects() },  // Refresh list
+                onFailure = { _state.value = ObjectListState.Error(it.message ?: "Import failed") }
+            )
+        }
+    }
+}
+```
+
+### 5. Error Handling Pattern
+
+**✅ DO - Typed exceptions, Result<T>:**
+```kotlin
+// Domain exceptions
+sealed class DomainException(message: String) : Exception(message)
+class ValidationException(message: String) : DomainException(message)
+class EntityNotFoundException(message: String) : DomainException(message)
+class StorageException(message: String) : DomainException(message)
+class NetworkException(message: String) : DomainException(message)
+
+// Use case error handling
+suspend fun invoke(input: Input): Result<Output> {
+    return try {
+        // Validation
+        val validated = validate(input)
+        if (validated.isFailure) {
+            return Result.failure(validated.exceptionOrNull()!!)
+        }
+        
+        // Business logic
+        val result = repository.execute(validated.getOrThrow())
+        result
+    } catch (e: Exception) {
+        when (e) {
+            is ValidationException -> Result.failure(e)
+            is EntityNotFoundException -> Result.failure(e)
+            else -> Result.failure(StorageException("Unexpected error: ${e.message}"))
+        }
+    }
+}
+
+// ViewModel error handling
+result.fold(
+    onSuccess = { /* Handle success */ },
+    onFailure = { exception ->
+        val errorMessage = when (exception) {
+            is ValidationException -> "Validation error: ${exception.message}"
+            is EntityNotFoundException -> "Not found: ${exception.message}"
+            is StorageException -> "Storage error: ${exception.message}"
+            else -> "Unknown error: ${exception.message}"
+        }
+        _state.value = State.Error(errorMessage)
+    }
+)
+```
+
+### 6. Testing Pattern (inspired by BLoC test)
+
+**✅ DO - Given-When-Then pattern:**
+```kotlin
+class ImportObjectUseCaseTest {
+    private lateinit var repository: ARObjectRepository
+    private lateinit var useCase: ImportObjectUseCase
+    
+    @Before
+    fun setup() {
+        repository = mockk()
+        useCase = ImportObjectUseCase(repository)
+    }
+    
+    @Test
+    fun `invoke with valid input should return success`() = runTest {
+        // GIVEN
+        val input = ImportObjectInput(
+            uri = "file://models/chair.glb",
+            name = "Chair",
+            modelType = ModelType.GLB
+        )
+        val expected = ARObject(/*...*/)
+        coEvery { repository.importObject(any(), any(), any()) } returns Result.success(expected)
+        
+        // WHEN
+        val result = useCase.invoke(input)
+        
+        // THEN
+        assertTrue(result.isSuccess)
+        assertEquals(expected, result.getOrNull())
+        coVerify(exactly = 1) { repository.importObject(input.uri, input.name, input.modelType) }
+    }
+    
+    @Test
+    fun `invoke with invalid name should return validation error`() = runTest {
+        // GIVEN
+        val input = ImportObjectInput(
+            uri = "file://models/chair.glb",
+            name = "",  // Invalid: empty
+            modelType = ModelType.GLB
+        )
+        
+        // WHEN
+        val result = useCase.invoke(input)
+        
+        // THEN
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ValidationException)
+        coVerify(exactly = 0) { repository.importObject(any(), any(), any()) }
+    }
+}
+```
+
+### 7. Code Organization Checklist
+
+**Domain Layer Checklist:**
+- [ ] Entities have Value Objects for validation
+- [ ] Repository interfaces defined (no implementations)
+- [ ] Use case interfaces + implementations
+- [ ] No platform-specific code (pure Kotlin)
+- [ ] Exception hierarchy defined
+- [ ] Input/Output models for use cases
+
+**Data Layer Checklist:**
+- [ ] DTOs with @Serializable annotation
+- [ ] Mappers implement BaseMapper
+- [ ] Repository implementations inject data sources
+- [ ] Exception handling with try-catch
+- [ ] Result<T> return types
+
+**Presentation Layer Checklist:**
+- [ ] ViewModels use StateFlow
+- [ ] Sealed class for state
+- [ ] Use cases injected via constructor
+- [ ] Error messages user-friendly
+- [ ] Loading states handled
+
+### 8. Dependency Injection Pattern
+
+**✅ DO - Manual DI (Kotlin Multiplatform compatible):**
+```kotlin
+// DI Container (commonMain)
+object AppContainer {
+    // Data sources (platform-specific)
+    lateinit var arObjectLocalDataSource: ARObjectLocalDataSource
+    lateinit var fileStorage: ModelFileStorage
+    
+    // Mappers (shared)
+    val arObjectMapper = ARObjectMapper()
+    
+    // Repositories (shared, uses platform data sources)
+    val arObjectRepository: ARObjectRepository by lazy {
+        ARObjectRepositoryImpl(
+            arObjectLocalDataSource,
+            fileStorage,
+            arObjectMapper
+        )
+    }
+    
+    // Use cases (shared)
+    val importObjectUseCase by lazy {
+        ImportObjectUseCase(arObjectRepository)
+    }
+    
+    val getAllObjectsUseCase by lazy {
+        GetAllObjectsUseCase(arObjectRepository)
+    }
+    
+    // ViewModels (presentation)
+    fun createObjectListViewModel(): ObjectListViewModel {
+        return ObjectListViewModel(
+            getAllObjectsUseCase,
+            importObjectUseCase
+        )
+    }
+}
+
+// Platform initialization (androidMain)
+actual fun initializePlatform() {
+    AppContainer.arObjectLocalDataSource = AndroidARObjectLocalDataSource(context)
+    AppContainer.fileStorage = AndroidModelFileStorage(context)
+}
+
+// Platform initialization (iosMain)
+actual fun initializePlatform() {
+    AppContainer.arObjectLocalDataSource = IOSARObjectLocalDataSource()
+    AppContainer.fileStorage = IOSModelFileStorage()
+}
+```
+
+---
+
+## 📚 Referanslar
+
+**Clean Architecture Kaynaklar:**
+- Domain Driven Design (DDD) principles
+- SOLID principles
+- Dependency Rule: Dependencies point inward (Domain ← Data ← Presentation)
+
+**Pattern Kaynakları:**
+- Repository Pattern (Martin Fowler)
+- Use Case Pattern (Clean Architecture)
+- Value Object Pattern (DDD)
+- Mapper Pattern (DTO transformation)
+- State Management (Unidirectional data flow)
+
+**Bu dokümantasyon Halleder projelerinden (Flutter/Dart) öğrenilen Clean Architecture best practice'leri ile zenginleştirilmiştir.**

@@ -14,6 +14,9 @@ import com.trendhive.arsample.presentation.ui.components.DeleteIcon
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ObjectListUiState
+import org.jetbrains.compose.resources.stringResource
+import arsample.composeapp.generated.resources.Res
+import arsample.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +42,7 @@ fun ObjectListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AR Sample - My Objects") },
+                title = { Text("${stringResource(Res.string.app_name)} - ${stringResource(Res.string.my_objects)}") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -47,7 +50,7 @@ fun ObjectListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showImportDialog = true }) {
-                Icon(AddIcon, contentDescription = "Import Object")
+                Icon(AddIcon, contentDescription = stringResource(Res.string.import))
             }
         },
         modifier = modifier
@@ -71,12 +74,12 @@ fun ObjectListScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "No objects yet",
+                            stringResource(Res.string.no_objects_yet),
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Tap + to import a 3D model",
+                            stringResource(Res.string.tap_to_import),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -103,7 +106,7 @@ fun ObjectListScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    Text("Start AR")
+                    Text(stringResource(Res.string.start_ar))
                 }
             }
 
@@ -112,7 +115,7 @@ fun ObjectListScreen(
                     modifier = Modifier.padding(16.dp),
                     action = {
                         TextButton(onClick = { /* clear error */ }) {
-                            Text("Dismiss")
+                            Text(stringResource(Res.string.dismiss))
                         }
                     }
                 ) {
@@ -166,7 +169,7 @@ fun ObjectListItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     DeleteIcon,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(Res.string.delete),
                     tint = MaterialTheme.colorScheme.error
                 )
             }

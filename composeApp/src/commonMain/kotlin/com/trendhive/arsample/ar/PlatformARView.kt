@@ -8,7 +8,8 @@ import com.trendhive.arsample.domain.model.PlacedObject
 expect fun PlatformARView(
     modifier: Modifier = Modifier,
     placedObjects: List<PlacedObject> = emptyList(),
-    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float) -> Unit,
+    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
-    modelPathToLoad: String? = null
+    modelPathToLoad: String? = null,
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
 )

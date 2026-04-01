@@ -32,6 +32,16 @@ Dependencies are managed via version catalog in `gradle/libs.versions.toml`.
 
 ## Key Patterns (Flutter-inspired DDD Implementation)
 
+> **Update (2026-04-01)**: Bu pattern'ler Halleder projelerinden (Flutter Clean Architecture) öğrenilen best practice'lerle zenginleştirilmiştir.
+
+### Pattern Principles
+1. **Clean Architecture** - 3-layer strict separation (Domain, Data, Presentation)
+2. **Single Responsibility** - Her class tek bir iş yapar
+3. **Dependency Inversion** - Dependencies point inward (Domain ← Data ← Presentation)
+4. **Result<T> Pattern** - Functional error handling (no exceptions in happy path)
+5. **Value Objects** - Domain validation at boundary
+6. **Input/Output Models** - Typed use case interfaces
+
 ### 1. Value Objects (Domain Validation)
 Domain validation için sealed class pattern kullanılır:
 ```kotlin
@@ -113,15 +123,17 @@ See [.claude/agents/README.md](./.claude/agents/README.md) for the full agent sy
 
 ### Agent List and Responsibilities
 
-| Agent | Role | Key Responsibilities | Output |
-|-------|------|---------------------|---------|
-| **Design & Analysis** | Research & Architecture | AR best practices, 3D model formats, Clean Architecture design, domain entities, use case definitions | Design document, entity definitions |
-| **Android Expert** | ARCore Implementation | SceneView integration, ARCore SDK, Android local storage (Room/DataStore), manifest configuration | Android implementation report |
-| **iOS Expert** | ARKit Implementation | ARKit/RealityKit integration, USDZ/GLB handling, iOS storage (FileManager/SQLite), Info.plist configuration | iOS implementation report |
-| **Main Developer** | Core Development | Domain layer (entities, use cases, repositories), data layer (repository implementations), presentation layer (ViewModels, UI screens), platform-specific AR code | Source code files |
-| **Bug Fixer** | Debugging & Fixes | Bug detection, root cause analysis (5 Why technique), fix implementation, regression testing | Bug reports, fixed code |
-| **Test Developer** | Unit Testing | Domain tests, use case tests, repository tests, ViewModel tests using MockK | Test files with 85-100% coverage |
-| **Code Reviewer** | Quality Control | Kotlin/Swift conventions, Clean Architecture compliance, DDD pattern validation, code smell detection | Review report, approve/reject |
+> **Update (2026-04-01)**: Agent'lar Halleder projelerinden öğrenilen Clean Architecture, BLoC/Cubit patterns, ve test stratejileri ile güçlendirilmiştir.
+
+| Agent | Role | Key Responsibilities | Output | Improvements |
+|-------|------|---------------------|---------|--------------|
+| **Design & Analysis** | Research & Architecture | AR best practices, 3D model formats, Clean Architecture design, domain entities, use case definitions | Design document, entity definitions | ✅ Layer dependency rules |
+| **Android Expert** | ARCore Implementation | SceneView integration, ARCore SDK, Android local storage (Room/DataStore), manifest configuration | Android implementation report | ✅ Build variants |
+| **iOS Expert** | ARKit Implementation | ARKit/RealityKit integration, USDZ/GLB handling, iOS storage (FileManager/SQLite), Info.plist configuration | iOS implementation report | ✅ State management |
+| **Main Developer** | Core Development | Domain layer (entities, use cases, repositories), data layer (repository implementations), presentation layer (ViewModels, UI screens), platform-specific AR code | Source code files | ✅ Use case patterns, Service layer, DI patterns |
+| **Bug Fixer** | Debugging & Fixes | Bug detection, root cause analysis (5 Why technique), fix implementation, regression testing | Bug reports, fixed code | ✅ Error handling patterns |
+| **Test Developer** | Unit Testing | Domain tests, use case tests, repository tests, ViewModel tests using MockK | Test files with 85-100% coverage | ✅ Given-When-Then, BDD patterns, Test builders |
+| **Code Reviewer** | Quality Control | Kotlin/Swift conventions, Clean Architecture compliance, DDD pattern validation, code smell detection | Review report, approve/reject | ✅ Enhanced checklists, Architecture rules |
 
 ### Agent Workflow
 

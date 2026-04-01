@@ -8,9 +8,10 @@ import com.trendhive.arsample.domain.model.PlacedObject
 actual fun PlatformARView(
     modifier: Modifier,
     placedObjects: List<PlacedObject>,
-    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float) -> Unit,
+    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit,
-    modelPathToLoad: String?
+    modelPathToLoad: String?,
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit
 ) {
     ARViewWrapper(
         modifier = modifier,

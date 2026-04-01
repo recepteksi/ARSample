@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AR Örnek</string>
+    <string name="my_objects">Nesnelerim</string>
+    <string name="ar_scene">AR Sahne</string>
+    <string name="back">Geri</string>
+    <string name="import">İçe Aktar</string>
+    <string name="object_list">Nesne Listesi</string>
+    <string name="no_objects_yet">Henüz nesne yok</string>
+    <string name="tap_to_import">3D model içe aktarmak için + düğmesine dokunun</string>
+    <string name="start_ar">AR\'ı Başlat</string>
+    <string name="delete">Sil</string>
+    <string name="dismiss">Kapat</string>
+    <string name="objects_count">%d nesne</string>
+    <string name="select_object">Nesne Seç</string>
+    <string name="no_imported_objects">Henüz içe aktarılan nesne yok</string>
+    <string name="selected">Seçili</string>
+    <string name="selected_id">Seçili: %s</string>
+    <string name="tap_to_place">Bir nesne seçmek için dokunun, ardından yerleştirmek için bir düzleme dokunun.</string>
+    <string name="placed_objects">Yerleştirilmiş Nesneler</string>
+    <string name="no_placed_objects">Henüz yerleştirilmiş nesne yok</string>
+    <string name="remove">Kaldır</string>
+    <string name="objects">Nesneler</string>
+    <string name="object_id">Nesne %s</string>
+    <string name="position">Pozisyon: (%1$s, %2$s, %3$s)</string>
+    <string name="import_model">3D Model İçe Aktar</string>
+    <string name="model_name">Model Adı</string>
+    <string name="format">Format</string>
+    <string name="cancel">İptal</string>
+    <string name="error_occurred">Bir hata oluştu</string>
+</resources>

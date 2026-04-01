@@ -6,6 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.trendhive.arsample.domain.model.ModelType
+import org.jetbrains.compose.resources.stringResource
+import arsample.composeapp.generated.resources.Res
+import arsample.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +23,7 @@ fun ImportDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Import 3D Model") },
+        title = { Text(stringResource(Res.string.import_model)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -28,7 +31,7 @@ fun ImportDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Model Name") },
+                    label = { Text(stringResource(Res.string.model_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -41,7 +44,7 @@ fun ImportDialog(
                         value = selectedType.name,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Format") },
+                        label = { Text(stringResource(Res.string.format)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -70,12 +73,12 @@ fun ImportDialog(
                 onClick = { onConfirm(name, selectedType) },
                 enabled = name.isNotBlank()
             ) {
-                Text("Import")
+                Text(stringResource(Res.string.import))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.cancel))
             }
         },
         modifier = modifier
