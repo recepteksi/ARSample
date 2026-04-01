@@ -1,0 +1,100 @@
+package com.trendhive.arsample
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.trendhive.arsample.domain.usecase.*
+import com.trendhive.arsample.presentation.ui.screens.ARScreen
+import com.trendhive.arsample.presentation.ui.screens.ObjectListScreen
+import com.trendhive.arsample.presentation.viewmodel.ARViewModel
+import com.trendhive.arsample.presentation.viewmodel.ObjectListViewModel
+
+@Composable
+fun App(
+    importObjectUseCase: ImportObjectUseCase,
+    getAllObjectsUseCase: GetAllObjectsUseCase,
+    deleteObjectUseCase: DeleteObjectUseCase,
+    placeObjectInSceneUseCase: PlaceObjectInSceneUseCase,
+    removeObjectFromSceneUseCase: RemoveObjectFromSceneUseCase,
+    getSceneUseCase: GetSceneUseCase,
+    saveSceneUseCase: SaveSceneUseCase,
+    sceneRepository: com.trendhive.arsample.domain.repository.ARSceneRepository
+) {
+    MaterialTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            var currentScreen by remember { mutableStateOf<Screen>(Screen.AR(null)) }
+
+            val objectListViewModel: ObjectListViewModel = viewModel {
+                ObjectListViewModel(
+                    getAllObjectsUseCase,
+                    deleteObjectUseCase,
+                    importObjectUseCase
+                )
+            }
+            val objectListUiState by objectListViewModel.uiState.collectAsState()
+
+            when (val screen = currentScreen) {
+                is Screen.ObjectList -> {
+                    ObjectListScreen(
+                        uiState = objectListUiState,
+                        onObjectSelected = { id ->
+                            objectListViewModel.clearImportSuccess()
+                            currentScreen = Screen.AR(id)
+                        },
+                        onStartAR = { currentScreen = Screen.AR(null) },
+                        onImportClick = { uri, name, type ->
+                            objectListViewModel.importObject(uri, name, type)
+                        },
+                        onDeleteObject = { objectListViewModel.deleteObject(it) }
+                    )
+                }
+                is Screen.AR -> {
+                    val viewModel: ARViewModel = viewModel {
+                        ARViewModel(
+                            placeObjectInSceneUseCase,
+                            removeObjectFromSceneUseCase,
+                            getSceneUseCase,
+                            saveSceneUseCase,
+                            sceneRepository
+                        )
+                    }
+                    val uiState by viewModel.uiState.collectAsState()
+                    
+                    LaunchedEffect(screen.selectedObjectId) {
+                        if (screen.selectedObjectId != null) {
+                            viewModel.selectObject(screen.selectedObjectId)
+                        }
+                    }
+
+                    ARScreen(
+                        uiState = uiState,
+                        availableObjects = objectListUiState.objects,
+                        onSelectObject = { viewModel.selectObject(it) },
+                        onNavigateBack = { currentScreen = Screen.ObjectList },
+                        onImportObject = { uri, name, type ->
+                            objectListViewModel.importObject(uri, name, type)
+                        },
+                        onObjectPlaced = { objectId, x, y, z ->
+                            viewModel.placeObject(
+                                objectId = objectId,
+                                position = com.trendhive.arsample.domain.model.Vector3(x, y, z)
+                            )
+                        },
+                        onObjectRemoved = { viewModel.removeObject(it) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+sealed class Screen {
+    data object ObjectList : Screen()
+    data class AR(val selectedObjectId: String?) : Screen()
+}
