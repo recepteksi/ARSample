@@ -10,8 +10,11 @@ import platform.ARKit.*
 import platform.CoreGraphics.CGRectMake
 import platform.darwin.NSObject
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.useContents
 import kotlinx.cinterop.ObjCAction
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.useContents
+import kotlinx.cinterop.get
+import kotlinx.cinterop.reinterpret
 
 private const val TAG = "ARViewWrapper"
 
@@ -59,19 +62,22 @@ fun ARViewWrapper(
                 // Extract world transform from result
                 val hitPose = firstResult.worldTransform
                 
-                // ARKit worldTransform is matrix_float4x4
-                // Extract translation components from the matrix
-                // Matrix is column-major, translation is in column 3 (index 3)
-                // In Kotlin/Native, matrix_float4x4.columns is a CArrayPointer
-                val (posX, posY, posZ) = hitPose.useContents {
-                    // columns is CArrayPointer<vector_float4>
-                    // We need to access the 4th column (index 3) which contains translation
-                    val translationColumn = columns!![3]
-                    Triple(
-                        translationColumn.useContents { this.x },
-                        translationColumn.useContents { this.y },
-                        translationColumn.useContents { this.z }
-                    )
+                // ARKit worldTransform is matrix_float4x4 (simd_float4x4)
+                // columns is CPointer<Vector128VarOf<Vector128>>
+                // Each column is 4 floats (16 bytes = 128 bits)
+                // Translation is in column 3 (index 3)
+                var posX = 0f
+                var posY = 0f
+                var posZ = 0f
+                hitPose.useContents {
+                    // columns is CPointer<Vector128VarOf<Vector128>>
+                    // Reinterpret as float pointer to access individual values
+                    // Matrix layout: [col0(4 floats), col1(4 floats), col2(4 floats), col3(4 floats)]
+                    // Translation (col3): indices 12, 13, 14
+                    val floatPtr = columns.reinterpret<kotlinx.cinterop.FloatVar>()
+                    posX = floatPtr[12]
+                    posY = floatPtr[13]
+                    posZ = floatPtr[14]
                 }
 
                 val pathToPlace = modelPathToLoad ?: run {
@@ -130,7 +136,7 @@ fun ARViewWrapper(
     )
 }
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class TapHandler(private val onTap: (UITapGestureRecognizer) -> Unit) : NSObject() {
     @ObjCAction
     fun handleTap(gesture: UITapGestureRecognizer) {
