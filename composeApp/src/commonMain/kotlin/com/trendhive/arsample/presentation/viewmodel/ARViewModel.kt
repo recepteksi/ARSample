@@ -115,7 +115,9 @@ class ARViewModel(
     }
 
     fun selectObject(objectId: String?) {
+        println("ARViewModel.selectObject: objectId=$objectId")
         _uiState.value = _uiState.value.copy(selectedObjectId = objectId)
+        println("ARViewModel.selectObject: updated state, selectedObjectId=${_uiState.value.selectedObjectId}")
     }
 
     fun clearError() {

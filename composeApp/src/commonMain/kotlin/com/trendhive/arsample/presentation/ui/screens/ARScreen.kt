@@ -38,7 +38,9 @@ fun ARScreen(
         mutableStateOf<Pair<String, com.trendhive.arsample.domain.model.ModelType>?>(null)
     }
     val selectedObject = remember(uiState.selectedObjectId, availableObjects) {
-        uiState.selectedObjectId?.let { id -> availableObjects.firstOrNull { it.id == id } }
+        val obj = uiState.selectedObjectId?.let { id -> availableObjects.firstOrNull { it.id == id } }
+        println("ARScreen: selectedObjectId=${uiState.selectedObjectId}, availableObjects.size=${availableObjects.size}, selectedObject=$obj, modelUri=${obj?.modelUri}")
+        obj
     }
 
     val launchPicker = rememberModelFilePicker { uri ->
@@ -82,7 +84,8 @@ fun ARScreen(
             PlatformARView(
                 modifier = Modifier.fillMaxSize(),
                 placedObjects = uiState.placedObjects,
-                onModelPlaced = { _, x, y, z, scale ->
+                onModelPlaced = { modelPath, x, y, z, scale ->
+                    println("ARScreen: onModelPlaced - modelPath=$modelPath, selectedObjectId=${uiState.selectedObjectId}")
                     uiState.selectedObjectId?.let { selectedId ->
                         onObjectPlaced(selectedId, x, y, z)
                     }

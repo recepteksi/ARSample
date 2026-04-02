@@ -50,6 +50,15 @@ fun ARView(
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
+    
+    // Track modelPathToLoad as state to trigger AndroidView update
+    var currentModelPath by remember { mutableStateOf(modelPathToLoad) }
+    
+    // Update current model path when parameter changes
+    LaunchedEffect(modelPathToLoad) {
+        currentModelPath = modelPathToLoad
+        Log.d(TAG, "Model path updated: $currentModelPath")
+    }
 
     fun normalizeModelLocation(location: String): String {
         return when {
@@ -65,9 +74,16 @@ fun ARView(
             return false
         }
         
-        val file = File(path)
+        // Remove file:// prefix if present
+        val filePath = if (path.startsWith("file://")) {
+            path.substring(7) // Remove "file://"
+        } else {
+            path
+        }
+        
+        val file = File(filePath)
         if (!file.exists()) {
-            Log.w(TAG, "Model file does not exist: $path")
+            Log.w(TAG, "Model file does not exist: $path (resolved to: $filePath)")
             return false
         }
         
@@ -268,8 +284,8 @@ fun ARView(
                             return@touchEvent true
                         }
                         
-                        if (!isValidModelPath(modelPathToLoad)) {
-                            Log.w(TAG, "Cannot place object: no valid model selected")
+                        if (!isValidModelPath(currentModelPath)) {
+                            Log.w(TAG, "Cannot place object: no valid model selected (currentModelPath=$currentModelPath)")
                             return@touchEvent true
                         }
                         
@@ -307,7 +323,7 @@ fun ARView(
                             "Placing model on ${plane.type} plane at (${pose.tx()}, ${pose.ty()}, ${pose.tz()}) with scale $DEFAULT_SCALE"
                         )
                         
-                        modelPathToLoad?.let { path ->
+                        currentModelPath?.let { path ->
                             onModelPlaced(path, pose.tx(), pose.ty(), pose.tz(), DEFAULT_SCALE)
                         }
                     }

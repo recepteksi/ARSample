@@ -104,6 +104,7 @@ actual fun PlatformARView(
             }
         }
         arAvailability.isSupported -> {
+            println("PlatformARView: Calling ARView with modelPathToLoad=$modelPathToLoad")
             ARView(
                 modifier = modifier,
                 placedObjects = placedObjects,

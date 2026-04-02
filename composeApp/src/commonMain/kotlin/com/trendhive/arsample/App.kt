@@ -81,6 +81,7 @@ fun App(
                             objectListViewModel.importObject(uri, name, type)
                         },
                         onObjectPlaced = { objectId, x, y, z ->
+                            println("App.kt: onObjectPlaced called - objectId=$objectId, pos=($x, $y, $z)")
                             viewModel.placeObject(
                                 objectId = objectId,
                                 position = com.trendhive.arsample.domain.model.Vector3(x, y, z)
