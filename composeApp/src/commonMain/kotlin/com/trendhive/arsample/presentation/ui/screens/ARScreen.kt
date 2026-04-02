@@ -31,6 +31,10 @@ fun ARScreen(
     onObjectRemoved: (placedObjectId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
+    // This prevents lambda closures from capturing stale uiState references
+    val currentUiState by rememberUpdatedState(uiState)
+    
     var showObjectList by remember { mutableStateOf(false) }
     var showPlacedObjects by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -81,12 +85,14 @@ fun ARScreen(
                 .padding(paddingValues)
         ) {
             // Platform-specific AR View
+            // CRITICAL FIX: Use currentUiState (rememberUpdatedState) instead of uiState
+            // to ensure the lambda always captures the latest state value
             PlatformARView(
                 modifier = Modifier.fillMaxSize(),
                 placedObjects = uiState.placedObjects,
                 onModelPlaced = { modelPath, x, y, z, scale ->
-                    println("ARScreen: onModelPlaced - modelPath=$modelPath, selectedObjectId=${uiState.selectedObjectId}")
-                    uiState.selectedObjectId?.let { selectedId ->
+                    println("ARScreen: onModelPlaced - modelPath=$modelPath, selectedObjectId=${currentUiState.selectedObjectId}")
+                    currentUiState.selectedObjectId?.let { selectedId ->
                         onObjectPlaced(selectedId, x, y, z)
                     }
                 },
@@ -160,14 +166,19 @@ fun ARScreen(
         // Object selection sheet
         if (showObjectList) {
             ModalBottomSheet(
-                onDismissRequest = { showObjectList = false }
+                onDismissRequest = { 
+                    println("ARScreen: Modal dismissing, selectedObjectId BEFORE=${uiState.selectedObjectId}")
+                    showObjectList = false 
+                    println("ARScreen: Modal dismissed, selectedObjectId AFTER=${uiState.selectedObjectId}")
+                }
             ) {
                 AvailableObjectsList(
                     objects = availableObjects,
                     selectedObjectId = uiState.selectedObjectId,
                     onObjectSelected = {
+                        println("ARScreen: Object selected in modal, id=$it")
                         onSelectObject(it)
-                        showObjectList = false
+                        showObjectList = false  // Close immediately - no delay needed
                     },
                     modifier = Modifier.padding(16.dp)
                 )

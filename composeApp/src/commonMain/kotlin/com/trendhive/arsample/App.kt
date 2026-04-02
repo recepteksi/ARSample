@@ -38,6 +38,18 @@ fun App(
                 )
             }
             val objectListUiState by objectListViewModel.uiState.collectAsState()
+            
+            // Create ARViewModel once, outside the when block
+            val arViewModel: ARViewModel = viewModel {
+                ARViewModel(
+                    placeObjectInSceneUseCase,
+                    removeObjectFromSceneUseCase,
+                    getSceneUseCase,
+                    saveSceneUseCase,
+                    sceneRepository
+                )
+            }
+            val arUiState by arViewModel.uiState.collectAsState()
 
             when (val screen = currentScreen) {
                 is Screen.ObjectList -> {
@@ -55,39 +67,28 @@ fun App(
                     )
                 }
                 is Screen.AR -> {
-                    val viewModel: ARViewModel = viewModel {
-                        ARViewModel(
-                            placeObjectInSceneUseCase,
-                            removeObjectFromSceneUseCase,
-                            getSceneUseCase,
-                            saveSceneUseCase,
-                            sceneRepository
-                        )
-                    }
-                    val uiState by viewModel.uiState.collectAsState()
-                    
                     LaunchedEffect(screen.selectedObjectId) {
                         if (screen.selectedObjectId != null) {
-                            viewModel.selectObject(screen.selectedObjectId)
+                            arViewModel.selectObject(screen.selectedObjectId)
                         }
                     }
 
                     ARScreen(
-                        uiState = uiState,
+                        uiState = arUiState,
                         availableObjects = objectListUiState.objects,
-                        onSelectObject = { viewModel.selectObject(it) },
+                        onSelectObject = { arViewModel.selectObject(it) },
                         onNavigateBack = { currentScreen = Screen.ObjectList },
                         onImportObject = { uri, name, type ->
                             objectListViewModel.importObject(uri, name, type)
                         },
                         onObjectPlaced = { objectId, x, y, z ->
                             println("App.kt: onObjectPlaced called - objectId=$objectId, pos=($x, $y, $z)")
-                            viewModel.placeObject(
+                            arViewModel.placeObject(
                                 objectId = objectId,
                                 position = com.trendhive.arsample.domain.model.Vector3(x, y, z)
                             )
                         },
-                        onObjectRemoved = { viewModel.removeObject(it) }
+                        onObjectRemoved = { arViewModel.removeObject(it) }
                     )
                 }
             }

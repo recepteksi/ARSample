@@ -44,21 +44,18 @@ fun ARView(
     modelPathToLoad: String? = null,
     onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
 ) {
+    // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
+    // This prevents AndroidView factory closure from capturing stale lambda references
+    val currentOnModelPlaced by rememberUpdatedState(onModelPlaced)
+    val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
+    val currentModelPath by rememberUpdatedState(modelPathToLoad)
+    
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
     val currentNodes = remember { mutableMapOf<String, ModelNode>() }
     var lastTapTime by remember { mutableStateOf(0L) }
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
-    
-    // Track modelPathToLoad as state to trigger AndroidView update
-    var currentModelPath by remember { mutableStateOf(modelPathToLoad) }
-    
-    // Update current model path when parameter changes
-    LaunchedEffect(modelPathToLoad) {
-        currentModelPath = modelPathToLoad
-        Log.d(TAG, "Model path updated: $currentModelPath")
-    }
 
     fun normalizeModelLocation(location: String): String {
         return when {
@@ -187,9 +184,15 @@ fun ARView(
                 try {
                     val modelInstance = withContext(Dispatchers.IO) {
                         try {
-                            val file = File(obj.arObjectId)
+                            // Strip file:// prefix if present
+                            val filePath = if (obj.arObjectId.startsWith("file://")) {
+                                obj.arObjectId.substring(7)
+                            } else {
+                                obj.arObjectId
+                            }
+                            val file = File(filePath)
                             if (!file.exists()) {
-                                Log.w(TAG, "Model file not found: ${obj.arObjectId}")
+                                Log.w(TAG, "Model file not found: ${obj.arObjectId} (resolved to: $filePath)")
                                 return@withContext null
                             }
                             view.modelLoader.loadModelInstance(modelLocation)
@@ -264,7 +267,7 @@ fun ARView(
                     
                     override fun onScaleEnd(detector: ScaleGestureDetector) {
                         selectedNodeId?.let { nodeId ->
-                            onObjectScaleChanged(nodeId, currentScale)
+                            currentOnObjectScaleChanged(nodeId, currentScale)
                             Log.d(TAG, "Scale ended for $nodeId with scale $currentScale")
                         }
                     }
@@ -324,7 +327,7 @@ fun ARView(
                         )
                         
                         currentModelPath?.let { path ->
-                            onModelPlaced(path, pose.tx(), pose.ty(), pose.tz(), DEFAULT_SCALE)
+                            currentOnModelPlaced(path, pose.tx(), pose.ty(), pose.tz(), DEFAULT_SCALE)
                         }
                     }
                     true

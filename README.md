@@ -349,7 +349,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Recep Tekşi**
 
 - GitHub: [@recepteksi](https://github.com/recepteksi)
-- LinkedIn: [Recep Tekşi](https://www.linkedin.com/in/recepteksi/)
+- LinkedIn: [Recep Tekşi](https://www.linkedin.com/in/recep-ek%C5%9Fi-473b29222/)
 
 ---
 

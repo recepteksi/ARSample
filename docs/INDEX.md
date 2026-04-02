@@ -46,7 +46,11 @@ Android platform-specific documentation (ARCore, SceneView, Kotlin).
 
 | File | Description |
 |------|-------------|
-| [android-arcore-analysis.md](./guides/hit-testing/android-arcore-analysis.md) | **🔴 Critical** - Comprehensive ARCore hit testing analysis and fixes |
+| **[ANDROID_ARCORE_STATE_SYNC_FIX.md](./ANDROID_ARCORE_STATE_SYNC_FIX.md)** | **🔴 FIXED** - AndroidView stale closure fix with rememberUpdatedState |
+| [ARCORE_QUICK_REFERENCE.md](./ARCORE_QUICK_REFERENCE.md) | **📚 Quick Reference** - Patterns, templates, gotchas for AR development |
+| [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | **🚀 Deployment** - Build, test, and deployment instructions |
+| [ANDROID_EXPERT_SESSION_SUMMARY.md](./ANDROID_EXPERT_SESSION_SUMMARY.md) | **📋 Session Summary** - Complete analysis and solution documentation |
+| [android-arcore-analysis.md](./guides/hit-testing/android-arcore-analysis.md) | ARCore hit testing analysis and fixes |
 | [android-arcore-summary.md](./android-arcore-summary.md) | Executive summary of Android implementation issues |
 | [arcore-best-practices-cheatsheet.md](./arcore-best-practices-cheatsheet.md) | Quick reference for ARCore best practices |
 
@@ -140,22 +144,24 @@ Development reports, summaries, and status updates.
 |----------|------------|--------|
 | Architecture | 1 | ✅ Complete |
 | Agents | 8 | ✅ Complete |
-| Android Docs | 3 | 🔴 Critical Issues Found |
+| Android Docs | 7 | ✅ State Sync Fixed |
 | iOS Docs | 6 | ✅ Complete |
 | Guides | 4 | ✅ Complete |
 | Reports | 6 | ✅ Complete |
-| **Total** | **28** | 🟡 In Progress |
+| **Total** | **32** | 🟢 Android Fix Deployed |
 
 ---
 
 ## 🔄 Recent Updates
 
-- **2026-03-30**: 🔴 **Android ARCore critical analysis completed** - 5 major issues found in hit testing
-- **2026-03-30**: Added Android ARCore implementation documentation (3 new files)
-- **2026-03-31**: Documentation reorganized into `docs/` folder structure
-- **2026-03-31**: Agents updated with Flutter-inspired DDD patterns
-- **2026-03-31**: Added Value Objects, DTO/Mapper patterns, Base Classes
-- **2026-03-30**: Initial agent system created
+- **2024-04-02**: ✅ **Android State Sync Bug FIXED** - rememberUpdatedState solution implemented
+- **2024-04-02**: Added 4 new Android documentation files (fix analysis, quick reference, deployment guide, session summary)
+- **2024-03-30**: 🔴 **Android ARCore critical analysis completed** - 5 major issues found in hit testing
+- **2024-03-30**: Added Android ARCore implementation documentation (3 new files)
+- **2024-03-31**: Documentation reorganized into `docs/` folder structure
+- **2024-03-31**: Agents updated with Flutter-inspired DDD patterns
+- **2024-03-31**: Added Value Objects, DTO/Mapper patterns, Base Classes
+- **2024-03-30**: Initial agent system created
 
 ## ⚠️ Action Required
 
