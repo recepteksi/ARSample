@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
         val removeObjectFromSceneUseCase = RemoveObjectFromSceneUseCase(sceneRepository)
         val getSceneUseCase = GetSceneUseCase(sceneRepository)
         val saveSceneUseCase = SaveSceneUseCase(sceneRepository)
+        val moveObjectUseCase = MoveObjectUseCase(sceneRepository)
 
         setContent {
             App(
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
                 removeObjectFromSceneUseCase = removeObjectFromSceneUseCase,
                 getSceneUseCase = getSceneUseCase,
                 saveSceneUseCase = saveSceneUseCase,
+                moveObjectUseCase = moveObjectUseCase,
                 sceneRepository = sceneRepository
             )
         }

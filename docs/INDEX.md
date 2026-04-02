@@ -20,6 +20,7 @@ Documentation about system design and architecture.
 | File | Description |
 |------|-------------|
 | [technical-analysis.md](./architecture/technical-analysis.md) | Technical architecture analysis and decisions |
+| **[DRAG_DROP_DESIGN.md](./DRAG_DROP_DESIGN.md)** | **🆕 NEW** - Drag-to-move and drag-to-delete feature design |
 
 ---
 
@@ -154,6 +155,7 @@ Development reports, summaries, and status updates.
 
 ## 🔄 Recent Updates
 
+- **2026-03-30**: 🆕 **[Drag-and-Drop Design Document](./DRAG_DROP_DESIGN.md)** - Complete UX/Architecture design for drag-to-move and drag-to-delete
 - **2024-04-02**: ✅ **Android State Sync Bug FIXED** - rememberUpdatedState solution implemented
 - **2024-04-02**: Added 4 new Android documentation files (fix analysis, quick reference, deployment guide, session summary)
 - **2024-03-30**: 🔴 **Android ARCore critical analysis completed** - 5 major issues found in hit testing

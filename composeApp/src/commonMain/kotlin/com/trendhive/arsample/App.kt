@@ -21,6 +21,7 @@ fun App(
     removeObjectFromSceneUseCase: RemoveObjectFromSceneUseCase,
     getSceneUseCase: GetSceneUseCase,
     saveSceneUseCase: SaveSceneUseCase,
+    moveObjectUseCase: MoveObjectUseCase,
     sceneRepository: com.trendhive.arsample.domain.repository.ARSceneRepository
 ) {
     MaterialTheme {
@@ -46,7 +47,8 @@ fun App(
                     removeObjectFromSceneUseCase,
                     getSceneUseCase,
                     saveSceneUseCase,
-                    sceneRepository
+                    sceneRepository,
+                    moveObjectUseCase
                 )
             }
             val arUiState by arViewModel.uiState.collectAsState()

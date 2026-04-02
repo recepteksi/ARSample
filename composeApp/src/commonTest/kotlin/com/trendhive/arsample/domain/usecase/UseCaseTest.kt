@@ -4,7 +4,9 @@ import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.ModelType
 import com.trendhive.arsample.domain.repository.ARObjectRepository
 import io.mockk.coEvery
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -233,7 +235,7 @@ class SaveSceneUseCaseTest {
     @Test
     fun `should return success when scene saved`() = runTest {
         val scene = com.trendhive.arsample.domain.model.ARScene.createDefault()
-        coEvery { repository.saveScene(scene) } just io.mockk.runs
+        coEvery { repository.saveScene(scene) } just runs
 
         val result = useCase(scene)
         assertTrue(result.isSuccess)
@@ -290,7 +292,7 @@ class CreateSceneUseCaseTest {
     @Test
     fun `should create scene with provided name`() = runTest {
         val sceneName = "My New Scene"
-        coEvery { repository.saveScene(any()) } just io.mockk.runs
+        coEvery { repository.saveScene(any()) } just runs
 
         val result = useCase(sceneName)
         assertTrue(result.isSuccess)

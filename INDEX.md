@@ -161,6 +161,7 @@ open iosApp/iosApp.xcodeproj  # Then run from Xcode
 
 ## 📝 Recent Updates
 
+- **2026-03-30**: Added [Drag-and-Drop Design Document](./docs/DRAG_DROP_DESIGN.md)
 - **2026-03-31**: Documentation reorganized into `docs/` structure
 - **2026-03-31**: Agents updated with Flutter-inspired DDD patterns
 - **2026-03-31**: Added Value Objects, DTO/Mapper patterns

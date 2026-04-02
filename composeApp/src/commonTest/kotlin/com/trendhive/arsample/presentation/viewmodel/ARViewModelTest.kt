@@ -7,6 +7,7 @@ import com.trendhive.arsample.domain.model.Quaternion
 import com.trendhive.arsample.domain.model.Vector3
 import com.trendhive.arsample.domain.repository.ARSceneRepository
 import com.trendhive.arsample.domain.usecase.GetSceneUseCase
+import com.trendhive.arsample.domain.usecase.MoveObjectUseCase
 import com.trendhive.arsample.domain.usecase.PlaceObjectInSceneUseCase
 import com.trendhive.arsample.domain.usecase.RemoveObjectFromSceneUseCase
 import com.trendhive.arsample.domain.usecase.SaveSceneUseCase
@@ -26,14 +27,16 @@ class ARViewModelTest {
         removeObjectUseCase: RemoveObjectFromSceneUseCase = mockk(),
         getSceneUseCase: GetSceneUseCase = mockk(),
         saveSceneUseCase: SaveSceneUseCase = mockk(),
-        sceneRepository: ARSceneRepository = mockk()
+        sceneRepository: ARSceneRepository = mockk(),
+        moveObjectUseCase: MoveObjectUseCase = mockk()
     ): ARViewModel {
         return ARViewModel(
             placeObjectUseCase = placeObjectUseCase,
             removeObjectUseCase = removeObjectUseCase,
             getSceneUseCase = getSceneUseCase,
             saveSceneUseCase = saveSceneUseCase,
-            sceneRepository = sceneRepository
+            sceneRepository = sceneRepository,
+            moveObjectUseCase = moveObjectUseCase
         )
     }
 

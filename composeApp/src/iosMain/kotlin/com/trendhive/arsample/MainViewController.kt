@@ -23,6 +23,7 @@ fun MainViewController() = ComposeUIViewController {
     val removeObjectFromSceneUseCase = RemoveObjectFromSceneUseCase(sceneRepository)
     val getSceneUseCase = GetSceneUseCase(sceneRepository)
     val saveSceneUseCase = SaveSceneUseCase(sceneRepository)
+    val moveObjectUseCase = MoveObjectUseCase(sceneRepository)
 
     App(
         importObjectUseCase = importObjectUseCase,
@@ -32,6 +33,7 @@ fun MainViewController() = ComposeUIViewController {
         removeObjectFromSceneUseCase = removeObjectFromSceneUseCase,
         getSceneUseCase = getSceneUseCase,
         saveSceneUseCase = saveSceneUseCase,
+        moveObjectUseCase = moveObjectUseCase,
         sceneRepository = sceneRepository
     )
 }
