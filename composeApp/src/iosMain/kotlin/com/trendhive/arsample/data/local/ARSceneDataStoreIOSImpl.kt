@@ -10,7 +10,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import platform.Foundation.*
+import kotlinx.cinterop.ExperimentalForeignApi
 
+@OptIn(ExperimentalForeignApi::class)
 class ARSceneDataStoreIOSImpl : ARSceneDataStore {
 
     private val fileManager = NSFileManager.defaultManager

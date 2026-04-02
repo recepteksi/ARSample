@@ -1,20 +1,20 @@
 ---
 name: ios-expert-agent
-description: ARKit entegrasyonu, iOS local storage ve platform-specific implementation araştırması
+description: ARKit integration, iOS local storage, and platform-specific implementation research
 type: reference
 ---
 
-# iOS Expert Agent - Rapor
+# iOS Expert Agent - Report
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
-**Tarih:** 2026-03-30
+**Project:** ARSample - 3D Object Placement/Removal
+**Date:** 2026-03-30
 **Platform:** iOS (SwiftUI + ARKit/RealityKit)
 
 ---
 
-## 1. ARKit & SwiftUI Entegrasyonu
+## 1. ARKit & SwiftUI Integration
 
-### 1.1 iOS 17+ - RealityView (Tercih Edilen)
+### 1.1 iOS 17+ - RealityView (Preferred)
 
 ```swift
 import SwiftUI
@@ -42,10 +42,10 @@ struct ARScreen: View {
 }
 ```
 
-### 1.2 RealityKit ile Model Yükleme
+### 1.2 RealityKit Model Loading
 
 ```swift
-// USDZ model asenkron yükleme
+// USDZ model async loading
 func loadModel(named fileName: String) async throws -> ModelEntity {
     guard let entity = try? await ModelEntity.loadModel(named: fileName) else {
         throw ARError.modelLoadingFailed
@@ -55,30 +55,30 @@ func loadModel(named fileName: String) async throws -> ModelEntity {
 }
 ```
 
-### 1.3 WWDC 2025-2026 Yenilikleri (visionOS 26)
+### 1.3 WWDC 2025-2026 Updates (visionOS 26)
 
-- **Object Manipulation API** - GestureComponent ile gelişmiş dokunma
-- **Bidirectional Data Flow** - SwiftUI <-> RealityKit veri bağlama
-- **Spatial Anchors** - Cross-platform uyumluluk
+- **Object Manipulation API** - Enhanced touch with GestureComponent
+- **Bidirectional Data Flow** - SwiftUI <-> RealityKit data binding
+- **Spatial Anchors** - Cross-platform compatibility
 
 ---
 
-## 2. Model Format Stratejisi
+## 2. Model Format Strategy
 
-### 2.1 Format Karşılaştırması
+### 2.1 Format Comparison
 
-| Format | Boyut | Kalite | Yükleme Süresi | Platform |
-|--------|-------|--------|----------------|----------|
-| **USDZ** | Medium | Kayıpsız | ~200ms (.rkassets) | iOS native |
-| **GLB** | Küçük | Sıkıştırılmış | ~1.25s | Cross-platform |
+| Format | Size | Quality | Load Time | Platform |
+|--------|------|---------|-----------|----------|
+| **USDZ** | Medium | Lossless | ~200ms (.rkassets) | iOS native |
+| **GLB** | Small | Compressed | ~1.25s | Cross-platform |
 
-### 2.2 GLB -> USDZ Dönüşümü
+### 2.2 GLB -> USDZ Conversion
 
 ```swift
-// Reality Converter CLI ile dönüşüm
+// Conversion with Reality Converter CLI
 // Terminal: realityconverter source.glb output.usdz
 
-// Programatik dönüşüm için:
+// For programmatic conversion:
 import ModelIO
 
 func convertGLBtoUSDZ(glbURL: URL, outputURL: URL) throws {
@@ -89,9 +89,9 @@ func convertGLBtoUSDZ(glbURL: URL, outputURL: URL) throws {
 
 ---
 
-## 3. Local Storage Stratejisi
+## 3. Local Storage Strategy
 
-### 3.1 FileManager (3D Modeller)
+### 3.1 FileManager (3D Models)
 
 ```swift
 final class ModelStorageManager {

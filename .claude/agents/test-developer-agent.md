@@ -1,24 +1,24 @@
 ---
 name: test-developer-agent
-description: Birim testleri yazar - domain, use case, repository, ViewModel testleri
+description: Writes unit tests - domain, use case, repository, ViewModel tests
 type: reference
 ---
 
 # Test Developer Agent
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
+**Project:** ARSample - 3D Object Placement/Removal
 **Platform:** Kotlin Multiplatform (Android + iOS)
-**Tarih:** 2026-03-30
+**Date:** 2026-03-30
 
 ---
 
-## Görev
+## Mission
 
-Yazılan kodun birim testlerini yazmak, test coverage'ı artırmak.
+Write unit tests for written code, increase test coverage.
 
 ---
 
-## Sorumluluklar
+## Responsibilities
 
 ### 1. Domain Layer Tests
 

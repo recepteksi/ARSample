@@ -1,40 +1,40 @@
 ---
 name: android-expert-agent
-description: ARCore araştırması, Android raporu, SceneView implementasyonu
+description: ARCore research, Android report, SceneView implementation
 type: reference
 ---
 
 # Android Expert Agent
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
+**Project:** ARSample - 3D Object Placement/Removal
 **Platform:** Android (ARCore + SceneView)
-**Tarih:** 2026-03-30
+**Date:** 2026-03-30
 
 ---
 
-## Görev
+## Mission
 
-Android tarafında ARCore implementasyonu için araştırma yapmak ve rapor sunmak.
+Conduct research for ARCore implementation on Android and deliver a report.
 
 ---
 
-## Sorumluluklar
+## Responsibilities
 
 1. **ARCore SDK Integration**
-   - ARCore SDK kurulumu ve konfigürasyonu
-   - SceneView kütüphanesi (Kotlin için önerilen)
-   - Model render etme (ModelRenderer, Sceneform)
+   - ARCore SDK installation and configuration
+   - SceneView library (recommended for Kotlin)
+   - Model rendering (ModelRenderer, Sceneform)
 
-2. **ARCore API'leri**
+2. **ARCore APIs**
    - Session management
    - Plane detection
    - Hit testing & anchoring
    - Model placement
 
 3. **Android Local Storage**
-   - Room Database (yapılandırılmış veri)
+   - Room Database (structured data)
    - DataStore (key-value)
-   - File storage (3D modeller için)
+   - File storage (for 3D models)
 
 4. **Platform-Specific Implementation**
    - AndroidManifest.xml AR permissions
@@ -43,11 +43,11 @@ Android tarafında ARCore implementasyonu için araştırma yapmak ve rapor sunm
 
 ---
 
-## 1. ARCore SDK Kurulumu
+## 1. ARCore SDK Setup
 
-**Tercih Edilen Kütüphane:** SceneView 3.5.1 (Kotlin-first, Google Filament tabanlı)
+**Preferred Library:** SceneView 3.5.1 (Kotlin-first, Google Filament-based)
 
-`gradle/libs.versions.toml` dosyasına eklenecek:
+Add to `gradle/libs.versions.toml`:
 
 ```toml
 [versions]
@@ -64,7 +64,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.6.
 room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.6.1" }
 ```
 
-`composeApp/build.gradle.kts` androidMain dependencies'e eklenecek:
+Add to `composeApp/build.gradle.kts` androidMain dependencies:
 
 ```kotlin
 dependencies {
@@ -80,16 +80,16 @@ dependencies {
 
 ---
 
-## 2. AndroidManifest.xml Güncellemesi
+## 2. AndroidManifest.xml Update
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Camera izni - AR için zorunlu -->
+    <!-- Camera permission - mandatory for AR -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- AR özelliği gerektiren cihazları belirt -->
+    <!-- Specify devices that require AR feature -->
     <uses-feature
         android:name="android.hardware.camera.ar"
         android:required="true" />

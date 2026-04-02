@@ -1,24 +1,24 @@
 ---
 name: code-reviewer-agent
-description: Kod standartları kontrolü - Kotlin/Swift conventions, Clean Architecture, DDD pattern uyumu
+description: Code standards verification - Kotlin/Swift conventions, Clean Architecture, DDD pattern compliance
 type: reference
 ---
 
 # Code Reviewer Agent
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
+**Project:** ARSample - 3D Object Placement/Removal
 **Platform:** Kotlin Multiplatform (Android + iOS)
-**Tarih:** 2026-03-30
+**Date:** 2026-03-30
 
 ---
 
-## Görev
+## Mission
 
-Yazılan kodun kalitesini kontrol etmek, standartlara uyumu sağlamak.
+Verify code quality and ensure standards compliance.
 
 ---
 
-## Sorumluluklar
+## Responsibilities
 
 ### 1. Kotlin Code Conventions
 
@@ -98,9 +98,9 @@ protocol ARSceneRepositoryProtocol {
 }
 ```
 
-### 3. Clean Architecture Kontrolü
+### 3. Clean Architecture Verification
 
-**Katman Bağımlılıkları:**
+**Layer Dependencies:**
 ```
 Presentation → Domain ← Data
                  ↑
@@ -108,38 +108,38 @@ Presentation → Domain ← Data
 ```
 
 **Dependency Rule:**
-- Domain katmanı başka hiçbir katmana bağımlı OLMAYACAK
-- Data katmanı domain'e bağımlı
-- Presentation katmanı domain'e bağımlı
+- Domain layer will NOT depend on any other layer
+- Data layer depends on domain
+- Presentation layer depends on domain
 
 **Dependency Injection:**
 ```kotlin
-// Domain katmanında bağımlılık yok (sadece interface)
+// No dependencies in domain layer (only interface)
 interface ARObjectRepository
 
-// Data katmanında implementasyon
+// Implementation in data layer
 class ARObjectRepositoryImpl(
     private val localDataSource: ARModelLocalDataSource,
     private val fileStorage: ModelFileStorage
 ) : ARObjectRepository
 
-// Presentation katmanında ViewModel
+// ViewModel in presentation layer
 class ARViewModel(
     private val placeObjectUseCase: PlaceObjectInSceneUseCase,
     private val removeObjectUseCase: RemoveObjectFromSceneUseCase
 ) : ViewModel()
 ```
 
-### 4. DDD Pattern Kontrolü
+### 4. DDD Pattern Verification
 
-**Entity Kuralları:**
-- Entity'ler sadece ID ve primitive tipler veya Value Objects içermeli
-- Business logic entity içinde DEĞİL, use case içinde
-- Entity'ler değişmez (immutable - Kotlin data class)
-- Validation Value Objects kullanılarak yapılmalı
+**Entity Rules:**
+- Entities should only contain ID and primitive types or Value Objects
+- Business logic NOT in entity, in use case
+- Entities are immutable (Kotlin data class)
+- Validation must be done using Value Objects
 
 ```kotlin
-// DOĞRU - Value Objects ile entity
+// CORRECT - Entity with Value Objects
 data class ARObject(
     val id: String,
     val name: ObjectName,      // Value Object
@@ -147,30 +147,30 @@ data class ARObject(
     val modelType: ModelType
 ) : BaseModel
 
-// YANLIŞ - Raw primitives ve validation logic
+// WRONG - Raw primitives and validation logic
 data class ARObject(
     val id: String,
     val name: String,
     val filePath: String
 ) {
     init {
-        require(name.isNotEmpty()) { "Name cannot be empty" }  // ❌ Validation entity'de değil, Value Object'te olmalı
+        require(name.isNotEmpty()) { "Name cannot be empty" }  // ❌ Validation in entity, should be in Value Object
     }
     
-    fun validateUri(): Boolean {  // ❌ Business logic entity'de olmamalı
+    fun validateUri(): Boolean {  // ❌ Business logic shouldn't be in entity
         return filePath.endsWith(".glb")
     }
 }
 ```
 
 **Value Objects (DDD Advanced Pattern):**
-- Domain validation için sealed class kullan
-- Value Object içinde validation logic olmalı
-- Immutable ve type-safe
-- Result<T> ile oluşturulmalı
+- Use sealed class for domain validation
+- Validation logic must be in Value Object
+- Immutable and type-safe
+- Must be created with Result<T>
 
 ```kotlin
-// DOĞRU - Value Object pattern
+// CORRECT - Value Object pattern
 sealed class ModelUri private constructor(val value: String) {
     companion object {
         fun create(uri: String): Result<ModelUri> {
@@ -185,7 +185,7 @@ sealed class ModelUri private constructor(val value: String) {
     private class ValidModelUri(value: String) : ModelUri(value)
 }
 
-// YANLIŞ - Inline validation
+// WRONG - Inline validation
 data class ARObject(val uri: String) {
     init {
         require(uri.endsWith(".glb")) { "Invalid" }  // ❌
@@ -193,16 +193,16 @@ data class ARObject(val uri: String) {
 }
 ```
 
-**UseCase Kuralları:**
-- Her use case tek bir iş yapmalı (SRP)
-- Use case'ler domain katmanında
-- Use case isimleri fiil olmalı
-- Input/Output tipli olmalı (BaseUseCase<Input, Output>)
-- Interface + Implementation pattern kullanılmalı
-- Result<T> dönmeli
+**UseCase Rules:**
+- Each use case does one thing (SRP)
+- Use cases in domain layer
+- Use case names should be verbs
+- Must be typed Input/Output (BaseUseCase<Input, Output>)
+- Must use Interface + Implementation pattern
+- Must return Result<T>
 
 ```kotlin
-// DOĞRU - Single responsibility, typed input/output
+// CORRECT - Single responsibility, typed input/output
 interface ImportObjectUseCaseInterface : BaseUseCase<ImportObjectInput, ARObject>
 
 class ImportObjectUseCase(
@@ -226,16 +226,16 @@ data class ImportObjectInput(
     val modelType: ModelType
 ) : BaseModel
 
-// YANLIŞ - Çoklu sorumluluk, tipi yok
-class ObjectManager {  // ❌ Çoklu sorumluluk
+// WRONG - Multiple responsibilities, no type
+class ObjectManager {  // ❌ Multiple responsibilities
     suspend fun import(uri: String): ARObject { ... }
     suspend fun delete(id: String) { ... }
     suspend fun place(id: String, pos: Vector3) { ... }
 }
 
-// YANLIŞ - Result dönmüyor
+// WRONG - Doesn't return Result
 class ImportObjectUseCase {
-    suspend fun invoke(uri: String): ARObject {  // ❌ Exception fırlatabilir
+    suspend fun invoke(uri: String): ARObject {  // ❌ Can throw exception
         if (uri.isBlank()) throw IllegalArgumentException()
         return repository.import(uri)
     }
@@ -244,7 +244,7 @@ class ImportObjectUseCase {
 
 **Repository Pattern:**
 ```kotlin
-// Interface domain katmanında
+// Interface in domain layer
 interface ARObjectRepository : BaseRepository {
     suspend fun getAllObjects(): Result<List<ARObject>>
     suspend fun saveObject(obj: ARObject): Result<Unit>
@@ -252,7 +252,7 @@ interface ARObjectRepository : BaseRepository {
     suspend fun importObject(uri: String, name: String, modelType: ModelType): Result<ARObject>
 }
 
-// Implementation data katmanında (with DTO and Mapper)
+// Implementation in data layer (with DTO and Mapper)
 class ARObjectRepositoryImpl(
     private val localDataSource: ARObjectLocalDataSource,
     private val fileStorage: ModelFileStorage,
@@ -272,12 +272,12 @@ class ARObjectRepositoryImpl(
 
 **Mapper Pattern (DTO ↔ Model):**
 ```kotlin
-// DOĞRU - BaseMapper kullanımı
+// CORRECT - BaseMapper usage
 class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
     override fun toDTO(model: ARObject): ARObjectDTO {
         return ARObjectDTO(
             id = model.id,
-            name = model.name.value,  // Value Object'ten değer çıkar
+            name = model.name.value,  // Extract value from Value Object
             modelUri = model.modelUri.value,
             modelType = model.modelType.name
         )
@@ -286,70 +286,70 @@ class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
     override fun toModel(dto: ARObjectDTO): ARObject {
         return ARObject(
             id = dto.id,
-            name = ObjectName.create(dto.name).getOrThrow(),  // Value Object oluştur
+            name = ObjectName.create(dto.name).getOrThrow(),  // Create Value Object
             modelUri = ModelUri.create(dto.modelUri).getOrThrow(),
             modelType = ModelType.valueOf(dto.modelType)
         )
     }
 }
 
-// YANLIŞ - Manuel dönüşüm her yerde
+// WRONG - Manual conversion everywhere
 class ARObjectRepositoryImpl {
     suspend fun save(obj: ARObject) {
-        val dto = ARObjectDTO(obj.id, obj.name, ...)  // ❌ Mapper kullanılmalı
+        val dto = ARObjectDTO(obj.id, obj.name, ...)  // ❌ Should use Mapper
         dataSource.save(dto)
     }
 }
 ```
 
-### 5. Code Smell Tespiti
+### 5. Code Smell Detection
 
-| Smell | Tespit Kriteri | Çözüm |
-|-------|----------------|-------|
-| Long Function | 50+ satır | Fonksiyonu parçalara böl |
-| Deep Nesting | 4+ seviye | Early return, extraction |
-| Large Class | 300+ satır | Sınıfı ayır |
-| Magic Numbers | Ham sayılar | Named constant |
-| Magic Strings | Ham stringler | String resource / constant |
-| Code Duplication | 3+ kez tekrar | Extraction, inheritance |
+| Smell | Detection Criteria | Solution |
+|-------|-------------------|----------|
+| Long Function | 50+ lines | Break function into parts |
+| Deep Nesting | 4+ levels | Early return, extraction |
+| Large Class | 300+ lines | Split class |
+| Magic Numbers | Raw numbers | Named constant |
+| Magic Strings | Raw strings | String resource / constant |
+| Code Duplication | 3+ times repeated | Extraction, inheritance |
 
-**Örnek Kontrol Listesi:**
+**Example Checklist:**
 ```kotlin
-// [ ] Tüm magic numbers named constant?
+// [ ] All magic numbers are named constants?
 val MAX_RETRY = 3  // ✓
 
-// [ ] Tüm strings externalized?
-val errorMessage = "Object not found"  // ✗ (resource'e taşı)
+// [ ] All strings externalized?
+val errorMessage = "Object not found"  // ✗ (move to resource)
 
-// [ ] Long fonksiyonlar refactor edildi mi?
-// [ ] Deep nesting var mı?
+// [ ] Long functions refactored?
+// [ ] Deep nesting exists?
 
-// [ ] Code duplication var mı?
+// [ ] Code duplication exists?
 ```
 
 ---
 
-## Review Süreci
+## Review Process
 
 ### 1. Pre-Commit Review
 ```
-Main Developer kod yazar
-  → Code Reviewer'a gönderir
-  → Review raporu alır
-  → Düzeltmeleri yapar
-  → Tekrar review
+Main Developer writes code
+  → Sends to Code Reviewer
+  → Gets review report
+  → Makes fixes
+  → Re-review
 ```
 
-### 2. Review Kategorileri
+### 2. Review Categories
 
-| Kategori | Zorunluluk | Açıklama |
-|----------|------------|----------|
-| Blocker | ❌ Geçirilemez | Runtime crash, data loss |
-| Critical | ⚠️ Dikkat | Performance, security |
-| Major | 📝 Öneri | Architecture, design |
-| Minor | 💡 İpucu | Style, formatting |
+| Category | Requirement | Description |
+|----------|-------------|-------------|
+| Blocker | ❌ Cannot pass | Runtime crash, data loss |
+| Critical | ⚠️ Attention | Performance, security |
+| Major | 📝 Suggestion | Architecture, design |
+| Minor | 💡 Tip | Style, formatting |
 
-### 3. Review Raporu Formatı
+### 3. Review Report Format
 
 ```markdown
 # Code Review Report
@@ -359,7 +359,7 @@ Main Developer kod yazar
 **Files:** [file1.kt, file2.kt]
 
 ## Summary
-[Toplam dosya sayısı, bulunan issue sayısı]
+[Total files, issues found]
 
 ## Blocker Issues
 1. [ ] File: `ARObject.kt:45`
@@ -380,9 +380,9 @@ Main Developer kod yazar
 
 ---
 
-## Çıktı
+## Output
 
-- Review raporu (Markdown)
-- Öneriler listesi
-- Zorunlu düzeltmeler listesi
-- Approve/Reject kararı
+- Review report (Markdown)
+- Suggestions list
+- Required fixes list
+- Approve/Reject decision

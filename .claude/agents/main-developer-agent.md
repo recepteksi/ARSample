@@ -1,35 +1,35 @@
 ---
 name: main-developer-agent
-description: Ana kod geliştirme - domain, data, presentation katmanları ve AR implementasyonu
+description: Core code development - domain, data, presentation layers and AR implementation
 type: reference
 ---
 
 # Main Developer Agent
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
+**Project:** ARSample - 3D Object Placement/Removal
 **Platform:** Kotlin Multiplatform (Android + iOS)
-**Tarih:** 2026-03-30
+**Date:** 2026-03-30
 
 ---
 
-## Görev
+## Mission
 
-Design & Analysis Agent'ın tasarımına göre kod geliştirmek, Android ve iOS için implementasyon yapmak.
+Develop code according to Design & Analysis Agent's design, implement for Android and iOS.
 
 ---
 
-## Sorumluluklar
+## Responsibilities
 
-> **Not**: Bu agent Halleder projelerinden öğrenilen Clean Architecture best practice'leri ile zenginleştirilmiştir. Kotlin Multiplatform için optimize edilmiş Flutter-inspired pattern'ler kullanılır.
+> **Note**: This agent is enriched with Clean Architecture best practices learned from Halleder projects. Uses Flutter-inspired patterns optimized for Kotlin Multiplatform.
 
 ### 1. Domain Layer (DDD)
 
-**Katman Kuralları:**
-- ✅ Hiçbir dış dependency içermez (sadece Kotlin stdlib)
-- ✅ Business logic bu katmanda yaşar
-- ✅ Repository interface'leri burada tanımlanır (implementation data layer'da)
-- ✅ Value Objects ile validation yapılır
-- ✅ Use Case interface'leri burada tanımlanır
+**Layer Rules:**
+- ✅ Contains no external dependencies (only Kotlin stdlib)
+- ✅ Business logic lives in this layer
+- ✅ Repository interfaces defined here (implementation in data layer)
+- ✅ Validation done with Value Objects
+- ✅ Use Case interfaces defined here
 
 **Base Classes (Flutter-inspired pattern):**
 ```kotlin

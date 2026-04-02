@@ -18,6 +18,7 @@ actual fun PlatformARView(
         placedObjects = placedObjects,
         onModelPlaced = onModelPlaced,
         onModelRemoved = onModelRemoved,
-        modelPathToLoad = modelPathToLoad
+        modelPathToLoad = modelPathToLoad,
+        onObjectScaleChanged = onObjectScaleChanged
     )
 }

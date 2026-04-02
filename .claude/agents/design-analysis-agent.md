@@ -1,58 +1,58 @@
 ---
 name: design-analysis-agent
-description: Web araştırması, AR örnekleri, tasarım dokümanı
+description: Web research, AR examples, design documentation
 type: reference
 ---
 
 # Design & Analysis Agent
 
-**Proje:** ARSample - 3D Obje Ekleme/Çıkarma
+**Project:** ARSample - 3D Object Placement/Removal
 **Platform:** Kotlin Multiplatform (Android + iOS)
-**Tarih:** 2026-03-30
+**Date:** 2026-03-30
 
 ---
 
-## Görev
+## Mission
 
-Web araştırması yaparak ARCore/ARKit uygulamaları için en iyi pratikleri, 3D model formatlarını ve Clean Architecture + DDD pattern önerilerini toplamak.
+Conduct web research to collect best practices for ARCore/ARKit applications, 3D model formats, and Clean Architecture + DDD pattern recommendations.
 
 ---
 
-## Sorumluluklar
+## Responsibilities
 
-### 1. ARCore/ARKit Best Practices Araştırması
+### 1. ARCore/ARKit Best Practices Research
 
 - SceneView, ARCore Kotlin API'leri
 - ARKit + SwiftUI entegrasyonu
 - Plane detection, hit testing, anchoring
 
-### 2. 3D Model Formatları Araştırması
+### 2. 3D Model Formats Research
 
-| Format | Platform | Sıkıştırma | Animasyon | Runtime Destek |
-|--------|----------|------------|-----------|----------------|
-| **GLB** | Her platform | Draco | Evet | En iyi |
-| **USDZ** | iOS/macOS | Kayıpsız | Evet | Quick Look, ARKit |
-| **FBX** | DCC Pipeline | Hayır | Evet | Dönüşüm gerekli |
+| Format | Platform | Compression | Animation | Runtime Support |
+|--------|----------|-------------|-----------|-----------------|
+| **GLB** | All platforms | Draco | Yes | Best |
+| **USDZ** | iOS/macOS | Lossless | Yes | Quick Look, ARKit |
+| **FBX** | DCC Pipeline | No | Yes | Conversion required |
 
-**Tercih Edilen Format:** glTF 2.0 / GLB
+**Preferred Format:** glTF 2.0 / GLB
 
-**Gerekçe:**
-- Evrensel destek (Google, Apple, Microsoft, Facebook)
-- Kompakt dosya boyutları, Draco sıkıştırma
-- Cross-platform uyumluluk
+**Rationale:**
+- Universal support (Google, Apple, Microsoft, Facebook)
+- Compact file sizes, Draco compression
+- Cross-platform compatibility
 
-### 3. Polygon Budget (Gerçek Dünya Testleri)
+### 3. Polygon Budget (Real-World Tests)
 
-| Cihaz | Hedef Polygon | Dosya Boyutu |
-|-------|---------------|--------------|
-| iPhone 14 (A15) | 150K yüzey | < 5 MB |
-| iPhone 12 (A14) | 90K yüzey | < 3 MB |
-| Android Orta | 50-65K yüzey | < 8 MB |
-| WebAR | 50K yüzey | < 4 MB |
+| Device | Target Polygon | File Size |
+|--------|----------------|-----------|
+| iPhone 14 (A15) | 150K faces | < 5 MB |
+| iPhone 12 (A14) | 90K faces | < 3 MB |
+| Android Mid | 50-65K faces | < 8 MB |
+| WebAR | 50K faces | < 4 MB |
 
 ---
 
-## Clean Architecture Katman Organizasyonu
+## Clean Architecture Layer Organization
 
 ```
 composeApp/src/
@@ -79,37 +79,37 @@ composeApp/src/
 
 ---
 
-## Domain Entity'leri
+## Domain Entities
 
-| Entity | Açıklama |
-|--------|----------|
-| `ARObject` | Import edilmiş 3D model - Metadata (isim, URI, type) |
-| `ARScene` | Sahne - PlacedObject'lerin listesi |
-| `PlacedObject` | Sahneye yerleştirilmiş obje (pozisyon, rotasyon, scale) |
-
----
-
-## Use Case'ler
-
-| Use Case | Sorumluluk |
-|----------|------------|
-| `ImportObjectUseCase` | Dosya URI'sinden yeni ARObject oluşturur |
-| `GetAllObjectsUseCase` | Tüm kayıtlı objeleri döndürür |
-| `DeleteObjectUseCase` | ARObject'i siler |
-| `PlaceObjectInSceneUseCase` | ARObject'i sahnede belirtilen pozisyona ekler |
-| `RemoveObjectFromSceneUseCase` | Objeyi sahneden çıkartır |
-| `UpdateObjectTransformUseCase` | Objenin pozisyon/rotasyon/scale güncelle |
-| `GetSceneUseCase` | Aktif sceneyi döndürür |
-| `SaveSceneUseCase` | Sceneyi local storage'a kaydeder |
+| Entity | Description |
+|--------|-------------|
+| `ARObject` | Imported 3D model - Metadata (name, URI, type) |
+| `ARScene` | Scene - List of PlacedObjects |
+| `PlacedObject` | Object placed in scene (position, rotation, scale) |
 
 ---
 
-## Local Storage Stratejisi
+## Use Cases
 
-| Veri | Storage | Sebep |
-|------|---------|-------|
-| Scene metadata (obje listesi, transform) | DataStore (JSON serialization) | Hızlı erişim, tip güvenli |
-| 3D Model dosyaları | Internal/External File Storage | Büyük dosyalar için uygun |
+| Use Case | Responsibility |
+|----------|----------------|
+| `ImportObjectUseCase` | Creates new ARObject from file URI |
+| `GetAllObjectsUseCase` | Returns all saved objects |
+| `DeleteObjectUseCase` | Deletes ARObject |
+| `PlaceObjectInSceneUseCase` | Adds ARObject to scene at specified position |
+| `RemoveObjectFromSceneUseCase` | Removes object from scene |
+| `UpdateObjectTransformUseCase` | Updates object position/rotation/scale |
+| `GetSceneUseCase` | Returns active scene |
+| `SaveSceneUseCase` | Saves scene to local storage |
+
+---
+
+## Local Storage Strategy
+
+| Data | Storage | Reason |
+|------|---------|--------|
+| Scene metadata (object list, transform) | DataStore (JSON serialization) | Fast access, type-safe |
+| 3D Model files | Internal/External File Storage | Suitable for large files |
 
 ---
 
@@ -131,34 +131,34 @@ Placement → Touch to place → Haptic feedback
 
 ---
 
-## AR Scene Management Prensipleri
+## AR Scene Management Principles
 
-### Anchoring Sistemi
-- Obje yerleştirmek için `Anchor` kullanılmalı (raw world coordinates DEĞİL)
+### Anchoring System
+- Use `Anchor` for object placement (NOT raw world coordinates)
 - ARCore: `Anchor`, `PlaneDetector`, `HitResult`
 - ARKit: `ARAnchor`, `ARRaycastResult`
 
-### Raycast Stratejisi
+### Raycast Strategy
 
-| Tip | Kullanım Senaryosu |
-|-----|-------------------|
-| **One-shot raycast** | Obje taşıma (drag) - anlık pozisyon gerekli |
-| **Tracked raycast** | Sabit obje yerleştirme - sürekli iyileştirme gerekli |
-| **Instant placement** | Hızlı yerleştirme - yüzey beklemeden |
-
----
-
-## Önemli Notlar
-
-1. **Anchor Kullanımı Zorunlu:** Obje pozisyonları mutlaka Anchor üzerine kurulmalı
-2. **GLB Varsayılan Format:** Cross-platform uyumluluk için GLB kullanılmalı
-3. **DataStore Persistence:** Scene verisi her değişiklikte otomatik kaydedilmeli
-4. **Object Pooling:** Performans için obje havuzu kullanılmalı
-5. **Error Boundaries:** Her platform için hata yönetimi sağlanmalı
+| Type | Use Case |
+|------|----------|
+| **One-shot raycast** | Object dragging - instant position needed |
+| **Tracked raycast** | Static object placement - continuous refinement needed |
+| **Instant placement** | Quick placement - without waiting for surface |
 
 ---
 
-## Kaynaklar
+## Important Notes
+
+1. **Anchor Usage Mandatory:** Object positions must be based on Anchors
+2. **GLB Default Format:** GLB should be used for cross-platform compatibility
+3. **DataStore Persistence:** Scene data should be auto-saved on every change
+4. **Object Pooling:** Object pool should be used for performance
+5. **Error Boundaries:** Error handling should be provided for each platform
+
+---
+
+## Resources
 
 - [Placing objects and handling 3D interaction | Apple Developer Documentation](https://developer.apple.com/documentation/arkit/placing-objects-and-handling-3d-interaction)
 - [ARKit and ARCore Mobile AR Development Guide 2026 | Reality Atlas](https://www.reality-atlas.com/learn/arkit-arcore-mobile-ar-development-guide)

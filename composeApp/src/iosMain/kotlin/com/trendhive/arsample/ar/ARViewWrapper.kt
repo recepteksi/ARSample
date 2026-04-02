@@ -20,9 +20,10 @@ private const val TAG = "ARViewWrapper"
 fun ARViewWrapper(
     modifier: Modifier = Modifier,
     placedObjects: List<PlacedObject> = emptyList(),
-    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float) -> Unit,
+    onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
-    modelPathToLoad: String? = null
+    modelPathToLoad: String? = null,
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
 ) {
     var arView by remember { mutableStateOf<ARSCNView?>(null) }
     
@@ -43,7 +44,7 @@ fun ARViewWrapper(
                     ARHitTestResultTypeExistingPlaneUsingExtent
                 )
                 
-                if (hitResults.count.toInt() == 0) {
+                if (hitResults.count().toInt() == 0) {
                     println("$TAG: No plane detected at tap location")
                     return@TapHandler
                 }
@@ -58,18 +59,29 @@ fun ARViewWrapper(
                 // Extract world transform from result
                 val hitPose = firstResult.worldTransform
                 
-                // Extract position from hit pose (iOS ARKit)
-                val posX = hitPose.tx()
-                val posY = hitPose.ty()
-                val posZ = hitPose.tz()
-                
+                // ARKit worldTransform is matrix_float4x4
+                // Extract translation components from the matrix
+                // Matrix is column-major, translation is in column 3 (index 3)
+                // In Kotlin/Native, matrix_float4x4.columns is a CArrayPointer
+                val (posX, posY, posZ) = hitPose.useContents {
+                    // columns is CArrayPointer<vector_float4>
+                    // We need to access the 4th column (index 3) which contains translation
+                    val translationColumn = columns!![3]
+                    Triple(
+                        translationColumn.useContents { this.x },
+                        translationColumn.useContents { this.y },
+                        translationColumn.useContents { this.z }
+                    )
+                }
+
                 val pathToPlace = modelPathToLoad ?: run {
                     println("$TAG: WARNING - No model path to load")
                     return@TapHandler
                 }
                 
-                println("$TAG: Placing model at position: x=$posX, y=$posY, z=$posZ")
-                onModelPlaced(pathToPlace, posX, posY, posZ)
+                val defaultScale = 0.3f // Match Android default scale
+                println("$TAG: Placing model at position: x=$posX, y=$posY, z=$posZ, scale=$defaultScale")
+                onModelPlaced(pathToPlace, posX, posY, posZ, defaultScale)
             } catch (e: Exception) {
                 println("$TAG: ERROR - Hit test failed: ${e.message}")
             }
