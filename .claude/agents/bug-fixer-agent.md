@@ -252,9 +252,50 @@ suspend fun saveScene(scene: ARScene): Result<Unit> {
       ↓
 4. Applies fix
       ↓
-5. Tests
+5. Tests & Verify
       ↓
-6. Presents report
+6. LOOP: If errors remain → Go to step 2
       ↓
-7. Sends to Code Reviewer (optional)
+7. Presents report (only when ALL errors fixed)
+      ↓
+8. Sends to Code Reviewer (optional)
+```
+
+---
+
+## CRITICAL RULES
+
+### Rule 1: Job Not Done Until Verified
+**Your task is NOT complete until:**
+1. `./gradlew :composeApp:assembleDebug` = BUILD SUCCESSFUL
+2. `./gradlew :composeApp:testDebugUnitTest` = All tests pass
+3. `./gradlew :composeApp:compileKotlinIosArm64` = BUILD SUCCESSFUL (if iOS affected)
+
+### Rule 2: Fix-Verify Loop
+```
+WHILE errors exist:
+    1. Identify error
+    2. Apply fix
+    3. Run build/test
+    4. IF still errors → continue loop
+    5. IF no errors → exit loop
+END WHILE
+```
+
+### Rule 3: Never Report Success with Errors
+- Do NOT say "fixed" until build passes
+- Do NOT skip verification step
+- Do NOT assume fix worked without testing
+
+### Rule 4: Full Error Scan
+After every fix session, run:
+```bash
+# Android build
+./gradlew :composeApp:assembleDebug
+
+# Tests
+./gradlew :composeApp:testDebugUnitTest
+
+# iOS build (if changes affect common/iOS code)
+./gradlew :composeApp:compileKotlinIosArm64
 ```

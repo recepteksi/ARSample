@@ -1202,3 +1202,28 @@ actual fun initializePlatform() {
 - State Management (Unidirectional data flow)
 
 **Bu dokümantasyon Halleder projelerinden (Flutter/Dart) öğrenilen Clean Architecture best practice'leri ile zenginleştirilmiştir.**
+---
+
+## CRITICAL RULES
+
+### Rule 1: Verify Before Completion
+**Your task is NOT complete until:**
+1. `./gradlew :composeApp:assembleDebug` = BUILD SUCCESSFUL
+2. `./gradlew :composeApp:testDebugUnitTest` = All tests pass
+3. `./gradlew :composeApp:compileKotlinIosArm64` = BUILD SUCCESSFUL
+
+### Rule 2: Fix-Verify Loop
+After making changes, ALWAYS run verification:
+```bash
+./gradlew :composeApp:assembleDebug :composeApp:compileKotlinIosArm64
+```
+
+If errors exist:
+1. Fix the error
+2. Re-run verification
+3. Repeat until BUILD SUCCESSFUL
+
+### Rule 3: Never Leave Broken Code
+- Do NOT report "done" if build fails
+- Do NOT skip compilation check
+- Do NOT assume code works without verification

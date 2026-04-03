@@ -10,6 +10,11 @@
         android:name="android.hardware.camera.ar"
         android:required="true" />
 
+    <!-- Camera hardware feature for ChromeOS compatibility -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
