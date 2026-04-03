@@ -42,9 +42,7 @@ fun ARScreen(
         mutableStateOf<Pair<String, com.trendhive.arsample.domain.model.ModelType>?>(null)
     }
     val selectedObject = remember(uiState.selectedObjectId, availableObjects) {
-        val obj = uiState.selectedObjectId?.let { id -> availableObjects.firstOrNull { it.id == id } }
-        println("ARScreen: selectedObjectId=${uiState.selectedObjectId}, availableObjects.size=${availableObjects.size}, selectedObject=$obj, modelUri=${obj?.modelUri}")
-        obj
+        uiState.selectedObjectId?.let { id -> availableObjects.firstOrNull { it.id == id } }
     }
 
     val launchPicker = rememberModelFilePicker { uri ->
@@ -91,7 +89,6 @@ fun ARScreen(
                 modifier = Modifier.fillMaxSize(),
                 placedObjects = uiState.placedObjects,
                 onModelPlaced = { modelPath, x, y, z, scale ->
-                    println("ARScreen: onModelPlaced - modelPath=$modelPath, selectedObjectId=${currentUiState.selectedObjectId}")
                     currentUiState.selectedObjectId?.let { selectedId ->
                         onObjectPlaced(selectedId, x, y, z)
                     }
@@ -166,19 +163,14 @@ fun ARScreen(
         // Object selection sheet
         if (showObjectList) {
             ModalBottomSheet(
-                onDismissRequest = { 
-                    println("ARScreen: Modal dismissing, selectedObjectId BEFORE=${uiState.selectedObjectId}")
-                    showObjectList = false 
-                    println("ARScreen: Modal dismissed, selectedObjectId AFTER=${uiState.selectedObjectId}")
-                }
+                onDismissRequest = { showObjectList = false }
             ) {
                 AvailableObjectsList(
                     objects = availableObjects,
                     selectedObjectId = uiState.selectedObjectId,
                     onObjectSelected = {
-                        println("ARScreen: Object selected in modal, id=$it")
                         onSelectObject(it)
-                        showObjectList = false  // Close immediately - no delay needed
+                        showObjectList = false
                     },
                     modifier = Modifier.padding(16.dp)
                 )

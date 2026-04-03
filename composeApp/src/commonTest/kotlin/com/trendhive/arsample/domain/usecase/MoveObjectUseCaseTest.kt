@@ -1,5 +1,7 @@
 package com.trendhive.arsample.domain.usecase
 
+import com.trendhive.arsample.domain.exception.EntityNotFoundException
+import com.trendhive.arsample.domain.exception.ValidationException
 import com.trendhive.arsample.domain.model.ARScene
 import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.domain.model.Vector3
@@ -76,7 +78,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(result.exceptionOrNull() is ValidationException)
         coVerify(exactly = 0) { repository.getSceneById(any()) }
     }
 
@@ -88,7 +90,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(result.exceptionOrNull() is ValidationException)
     }
 
     // Test 4: Fail when scene not found
@@ -102,6 +104,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is EntityNotFoundException)
         assertTrue(result.exceptionOrNull()?.message?.contains("Scene not found") == true)
     }
 
@@ -121,6 +124,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is EntityNotFoundException)
         assertTrue(result.exceptionOrNull()?.message?.contains("Object not found") == true)
     }
 
@@ -132,6 +136,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ValidationException)
         assertTrue(result.exceptionOrNull()?.message?.contains("invalid") == true || 
                    result.exceptionOrNull()?.message?.contains("NaN") == true)
     }
@@ -143,6 +148,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ValidationException)
     }
 
     @Test
@@ -152,6 +158,7 @@ class MoveObjectUseCaseTest {
 
         // Then
         assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ValidationException)
     }
 
     // Test 7: Move object when scene has multiple objects

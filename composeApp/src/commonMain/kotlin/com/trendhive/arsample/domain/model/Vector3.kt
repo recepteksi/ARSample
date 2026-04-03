@@ -1,10 +1,12 @@
 package com.trendhive.arsample.domain.model
 
+import com.trendhive.arsample.domain.base.BaseModel
+
 data class Vector3(
     val x: Float = 0f,
     val y: Float = 0f,
     val z: Float = 0f
-) {
+) : BaseModel {
     fun distanceTo(other: Vector3): Float {
         val dx = x - other.x
         val dy = y - other.y

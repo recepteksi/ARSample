@@ -1,11 +1,13 @@
 package com.trendhive.arsample.domain.model
 
+import com.trendhive.arsample.domain.base.BaseModel
+
 data class Quaternion(
     val x: Float = 0f,
     val y: Float = 0f,
     val z: Float = 0f,
     val w: Float = 1f
-) {
+) : BaseModel {
     fun normalize(): Quaternion {
         val magnitude = kotlin.math.sqrt(x * x + y * y + z * z + w * w)
         return if (magnitude > 0f) {

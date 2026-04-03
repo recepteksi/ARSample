@@ -1,5 +1,7 @@
 package com.trendhive.arsample.domain.model
 
+import com.trendhive.arsample.domain.base.BaseModel
+
 /**
  * Value object representing 2D screen coordinates.
  *
@@ -12,7 +14,7 @@ package com.trendhive.arsample.domain.model
 data class ScreenPosition(
     val x: Float,
     val y: Float
-) {
+) : BaseModel {
     /**
      * Calculates the Euclidean distance to another screen position.
      *

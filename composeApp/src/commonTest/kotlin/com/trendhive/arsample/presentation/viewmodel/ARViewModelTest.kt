@@ -13,14 +13,34 @@ import com.trendhive.arsample.domain.usecase.RemoveObjectFromSceneUseCase
 import com.trendhive.arsample.domain.usecase.SaveSceneUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ARViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     private fun createViewModel(
         placeObjectUseCase: PlaceObjectInSceneUseCase = mockk(),
@@ -47,6 +67,9 @@ class ARViewModelTest {
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
         // Note: init block runs immediately, so we check the state after init
+        
+        // Advance until idle to let coroutine complete
+        testDispatcher.scheduler.advanceUntilIdle()
 
         // The state should have been updated after init
         val state = viewModel.uiState.value
@@ -63,6 +86,7 @@ class ARViewModelTest {
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
         // Wait for init to complete
+        testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
         assertEquals(1, state.placedObjects.size)
@@ -75,6 +99,7 @@ class ARViewModelTest {
         coEvery { mockRepository.getOrCreateDefaultScene() } throws Exception("Load failed")
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
         assertFalse(state.isLoading)
@@ -97,8 +122,10 @@ class ARViewModelTest {
             placeObjectUseCase = mockPlaceUseCase,
             sceneRepository = mockSceneRepository
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.placeObject("obj1", Vector3(1f, 2f, 3f))
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.placedObjects.size)
@@ -119,8 +146,10 @@ class ARViewModelTest {
             placeObjectUseCase = mockPlaceUseCase,
             sceneRepository = mockSceneRepository
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.placeObject("obj1", Vector3(1f, 2f, 3f))
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals("Place failed", state.error)
@@ -143,8 +172,10 @@ class ARViewModelTest {
             removeObjectUseCase = mockRemoveUseCase,
             sceneRepository = mockSceneRepository
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.removeObject("obj1")
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertTrue(state.placedObjects.isEmpty())
@@ -166,8 +197,10 @@ class ARViewModelTest {
             removeObjectUseCase = mockRemoveUseCase,
             sceneRepository = mockSceneRepository
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.removeObject("obj1")
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals("Remove failed", state.error)
@@ -179,6 +212,7 @@ class ARViewModelTest {
         coEvery { mockRepository.getOrCreateDefaultScene() } returns TestDataBuilders.createTestARScene("scene1")
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.selectObject("obj1")
 
         assertEquals("obj1", viewModel.uiState.value.selectedObjectId)
@@ -190,6 +224,7 @@ class ARViewModelTest {
         coEvery { mockRepository.getOrCreateDefaultScene() } returns TestDataBuilders.createTestARScene("scene1")
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.selectObject("obj1")
         viewModel.selectObject(null)
 
@@ -202,6 +237,7 @@ class ARViewModelTest {
         coEvery { mockRepository.getOrCreateDefaultScene() } throws Exception("Test error")
 
         val viewModel = createViewModel(sceneRepository = mockRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
         var state = viewModel.uiState.value
         assertEquals("Test error", state.error)
 
@@ -226,11 +262,13 @@ class ARViewModelTest {
             placeObjectUseCase = mockPlaceUseCase,
             sceneRepository = mockSceneRepository
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val rotation = Quaternion(0.1f, 0.2f, 0.3f, 0.9f)
         val scale = 2.5f
 
         viewModel.placeObject("obj1", Vector3(1f, 2f, 3f), rotation, scale)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.placedObjects.size)

@@ -1,9 +1,10 @@
 package com.trendhive.arsample.domain.repository
 
+import com.trendhive.arsample.domain.base.BaseRepository
 import com.trendhive.arsample.domain.model.ARScene
 import com.trendhive.arsample.domain.model.PlacedObject
 
-interface ARSceneRepository {
+interface ARSceneRepository : BaseRepository {
     suspend fun getAllScenes(): List<ARScene>
     suspend fun getSceneById(id: String): ARScene?
     suspend fun saveScene(scene: ARScene)

@@ -70,21 +70,27 @@ class ARSceneRepositoryImplTest {
 
     @Test
     fun `deleteScene should clear defaultSceneId if matches`() = runTest {
-        coEvery { mockDataStore.deleteScene("scene1") } just runs
-        // First, create a default scene
-        val defaultScene = TestDataBuilders.createTestARScene("scene1", "Default")
-        coEvery { mockDataStore.getScene("scene1") } returns defaultScene
-
-        repository.getOrCreateDefaultScene()
-        repository.deleteScene("scene1")
-
-        // Verify default was cleared by checking second getOrCreateDefaultScene creates new one
-        val newScene = TestDataBuilders.createTestARScene("scene2", "New Default")
+        // Set up mock to return null first (no scene), then save the new scene, then return it
+        coEvery { mockDataStore.getScene(any()) } returns null
         coEvery { mockDataStore.saveScene(any()) } just runs
+        
+        // Create a default scene first (this generates a dynamic ID)
+        val firstScene = repository.getOrCreateDefaultScene()
+        val firstSceneId = firstScene.id
+        
+        // Set up mock to return the scene when asked for it
+        coEvery { mockDataStore.getScene(firstSceneId) } returns firstScene
+        coEvery { mockDataStore.deleteScene(firstSceneId) } just runs
+        
+        // Now delete it
+        repository.deleteScene(firstSceneId)
+        
+        // Reset mock to return null for the next call
         coEvery { mockDataStore.getScene(any()) } returns null
 
+        // Verify default was cleared by checking second getOrCreateDefaultScene creates new one
         val result = repository.getOrCreateDefaultScene()
-        assertTrue(result.id != "scene1")
+        assertTrue(result.id != firstSceneId)
     }
 
     @Test
@@ -99,11 +105,17 @@ class ARSceneRepositoryImplTest {
 
     @Test
     fun `getOrCreateDefaultScene should return cached scene on second call`() = runTest {
-        val defaultScene = TestDataBuilders.createTestARScene("scene1", "Default Scene")
+        // Setup mocks to first return null, then the saved scene for subsequent calls
+        coEvery { mockDataStore.getScene(any()) } returns null
         coEvery { mockDataStore.saveScene(any()) } just runs
-        coEvery { mockDataStore.getScene("scene1") } returns defaultScene
 
+        // First call creates a new scene
         val first = repository.getOrCreateDefaultScene()
+        
+        // Now mock to return the scene when asked for it by its ID
+        coEvery { mockDataStore.getScene(first.id) } returns first
+
+        // Second call should return the cached scene
         val second = repository.getOrCreateDefaultScene()
 
         assertEquals(first.id, second.id)

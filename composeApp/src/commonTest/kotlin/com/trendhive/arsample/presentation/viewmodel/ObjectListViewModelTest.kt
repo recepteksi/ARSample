@@ -8,14 +8,34 @@ import com.trendhive.arsample.domain.usecase.GetAllObjectsUseCase
 import com.trendhive.arsample.domain.usecase.ImportObjectUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ObjectListViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     private fun createViewModel(
         getAllObjectsUseCase: GetAllObjectsUseCase = mockk(),
@@ -39,6 +59,7 @@ class ObjectListViewModelTest {
         coEvery { mockUseCase() } returns objects
 
         val viewModel = createViewModel(getAllObjectsUseCase = mockUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
         assertEquals(2, state.objects.size)
@@ -52,6 +73,7 @@ class ObjectListViewModelTest {
         coEvery { mockUseCase() } throws Exception("Load failed")
 
         val viewModel = createViewModel(getAllObjectsUseCase = mockUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
         assertEquals("Load failed", state.error)
@@ -64,6 +86,7 @@ class ObjectListViewModelTest {
         coEvery { mockUseCase() } returns emptyList()
 
         val viewModel = createViewModel(getAllObjectsUseCase = mockUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
         assertTrue(state.objects.isEmpty())
@@ -76,16 +99,17 @@ class ObjectListViewModelTest {
         val mockGetUseCase = mockk<GetAllObjectsUseCase>()
         val mockImportUseCase = mockk<ImportObjectUseCase>()
 
-        coEvery { mockGetUseCase() } returns emptyList()
+        coEvery { mockGetUseCase() } returns emptyList() andThen listOf(newObject)
         coEvery { mockImportUseCase("content://uri", "Lamp", ModelType.GLB) } returns Result.success(newObject)
-        coEvery { mockGetUseCase() } returns listOf(newObject)
 
         val viewModel = createViewModel(
             getAllObjectsUseCase = mockGetUseCase,
             importObjectUseCase = mockImportUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.importObject("content://uri", "Lamp", ModelType.GLB)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertTrue(state.importSuccess)
@@ -104,8 +128,10 @@ class ObjectListViewModelTest {
             getAllObjectsUseCase = mockGetUseCase,
             importObjectUseCase = mockImportUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.importObject("content://uri", "Lamp", ModelType.GLB)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals("Import failed", state.error)
@@ -121,16 +147,17 @@ class ObjectListViewModelTest {
         val mockGetUseCase = mockk<GetAllObjectsUseCase>()
         val mockDeleteUseCase = mockk<DeleteObjectUseCase>()
 
-        coEvery { mockGetUseCase() } returns objects
+        coEvery { mockGetUseCase() } returns objects andThen listOf(objects[1])
         coEvery { mockDeleteUseCase("1") } returns Result.success(Unit)
-        coEvery { mockGetUseCase() } returns listOf(objects[1])
 
         val viewModel = createViewModel(
             getAllObjectsUseCase = mockGetUseCase,
             deleteObjectUseCase = mockDeleteUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.deleteObject("1")
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.objects.size)
@@ -152,8 +179,10 @@ class ObjectListViewModelTest {
             getAllObjectsUseCase = mockGetUseCase,
             deleteObjectUseCase = mockDeleteUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.deleteObject("1")
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals("Delete failed", state.error)
@@ -171,8 +200,10 @@ class ObjectListViewModelTest {
             getAllObjectsUseCase = mockGetUseCase,
             importObjectUseCase = mockImportUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.importObject("uri", "name", ModelType.GLB)
+        testDispatcher.scheduler.advanceUntilIdle()
         var state = viewModel.uiState.value
         assertEquals("Test error", state.error)
 
@@ -187,16 +218,17 @@ class ObjectListViewModelTest {
         val mockGetUseCase = mockk<GetAllObjectsUseCase>()
         val mockImportUseCase = mockk<ImportObjectUseCase>()
 
-        coEvery { mockGetUseCase() } returns emptyList()
+        coEvery { mockGetUseCase() } returns emptyList() andThen listOf(newObject)
         coEvery { mockImportUseCase(any(), any(), any()) } returns Result.success(newObject)
-        coEvery { mockGetUseCase() } returns listOf(newObject)
 
         val viewModel = createViewModel(
             getAllObjectsUseCase = mockGetUseCase,
             importObjectUseCase = mockImportUseCase
         )
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.importObject("uri", "Chair", ModelType.GLB)
+        testDispatcher.scheduler.advanceUntilIdle()
         var state = viewModel.uiState.value
         assertTrue(state.importSuccess)
 
@@ -213,7 +245,9 @@ class ObjectListViewModelTest {
         coEvery { mockGetUseCase() } returns objects
 
         val viewModel = createViewModel(getAllObjectsUseCase = mockGetUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.loadObjects()
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.objects.size)

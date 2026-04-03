@@ -1,86 +1,93 @@
 package com.trendhive.arsample.data.mapper
 
+import com.trendhive.arsample.data.dto.ARObjectDTO
+import com.trendhive.arsample.data.dto.PlacedObjectDTO
+import com.trendhive.arsample.domain.base.BaseMapper
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.ModelType
 import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.domain.model.Quaternion
 import com.trendhive.arsample.domain.model.Vector3
-import kotlinx.serialization.Serializable
 
-@Serializable
-data class ARObjectEntity(
-    val id: String,
-    val name: String,
-    val modelUri: String,
-    val modelType: String,
-    val thumbnailUri: String?,
-    val createdAt: Long,
-    val lastPlacedAt: Long?
-)
-
-@Serializable
-data class PlacedObjectEntity(
-    val objectId: String,
-    val arObjectId: String,
-    val posX: Float,
-    val posY: Float,
-    val posZ: Float,
-    val rotX: Float,
-    val rotY: Float,
-    val rotZ: Float,
-    val rotW: Float,
-    val scale: Float
-)
-
-object ARObjectMapper {
-    fun toDomain(entity: ARObjectEntity): ARObject {
-        return ARObject(
-            id = entity.id,
-            name = entity.name,
-            modelUri = entity.modelUri,
-            modelType = ModelType.valueOf(entity.modelType),
-            thumbnailUri = entity.thumbnailUri,
-            createdAt = entity.createdAt,
-            lastPlacedAt = entity.lastPlacedAt
+/**
+ * Mapper for ARObject ↔ ARObjectDTO transformations.
+ */
+class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject>() {
+    
+    override fun toDTO(model: ARObject): ARObjectDTO {
+        return ARObjectDTO(
+            id = model.id,
+            name = model.name,
+            modelUri = model.modelUri,
+            modelType = model.modelType.name,
+            thumbnailUri = model.thumbnailUri,
+            createdAt = model.createdAt,
+            lastPlacedAt = model.lastPlacedAt
         )
     }
 
-    fun toEntity(domain: ARObject): ARObjectEntity {
-        return ARObjectEntity(
-            id = domain.id,
-            name = domain.name,
-            modelUri = domain.modelUri,
-            modelType = domain.modelType.name,
-            thumbnailUri = domain.thumbnailUri,
-            createdAt = domain.createdAt,
-            lastPlacedAt = domain.lastPlacedAt
+    override fun toModel(dto: ARObjectDTO): ARObject {
+        return ARObject(
+            id = dto.id,
+            name = dto.name,
+            modelUri = dto.modelUri,
+            modelType = ModelType.valueOf(dto.modelType),
+            thumbnailUri = dto.thumbnailUri,
+            createdAt = dto.createdAt,
+            lastPlacedAt = dto.lastPlacedAt
         )
+    }
+    
+    companion object {
+        private val instance = ARObjectMapper()
+        
+        /**
+         * Legacy static methods for backward compatibility.
+         * Prefer using instance methods with dependency injection.
+         */
+        fun toDomain(dto: ARObjectDTO): ARObject = instance.toModel(dto)
+        fun toEntity(model: ARObject): ARObjectDTO = instance.toDTO(model)
     }
 }
 
-object PlacedObjectMapper {
-    fun toDomain(entity: PlacedObjectEntity): PlacedObject {
-        return PlacedObject(
-            objectId = entity.objectId,
-            arObjectId = entity.arObjectId,
-            position = Vector3(entity.posX, entity.posY, entity.posZ),
-            rotation = Quaternion(entity.rotX, entity.rotY, entity.rotZ, entity.rotW),
-            scale = entity.scale
+/**
+ * Mapper for PlacedObject ↔ PlacedObjectDTO transformations.
+ */
+class PlacedObjectMapper : BaseMapper<PlacedObjectDTO, PlacedObject>() {
+    
+    override fun toDTO(model: PlacedObject): PlacedObjectDTO {
+        return PlacedObjectDTO(
+            objectId = model.objectId,
+            arObjectId = model.arObjectId,
+            posX = model.position.x,
+            posY = model.position.y,
+            posZ = model.position.z,
+            rotX = model.rotation.x,
+            rotY = model.rotation.y,
+            rotZ = model.rotation.z,
+            rotW = model.rotation.w,
+            scale = model.scale
         )
     }
 
-    fun toEntity(domain: PlacedObject): PlacedObjectEntity {
-        return PlacedObjectEntity(
-            objectId = domain.objectId,
-            arObjectId = domain.arObjectId,
-            posX = domain.position.x,
-            posY = domain.position.y,
-            posZ = domain.position.z,
-            rotX = domain.rotation.x,
-            rotY = domain.rotation.y,
-            rotZ = domain.rotation.z,
-            rotW = domain.rotation.w,
-            scale = domain.scale
+    override fun toModel(dto: PlacedObjectDTO): PlacedObject {
+        return PlacedObject(
+            objectId = dto.objectId,
+            arObjectId = dto.arObjectId,
+            position = Vector3(dto.posX, dto.posY, dto.posZ),
+            rotation = Quaternion(dto.rotX, dto.rotY, dto.rotZ, dto.rotW),
+            scale = dto.scale
         )
+    }
+    
+    companion object {
+        private val instance = PlacedObjectMapper()
+        
+        /**
+         * Legacy static methods for backward compatibility.
+         * Prefer using instance methods with dependency injection.
+         */
+        fun toDomain(dto: PlacedObjectDTO): PlacedObject = instance.toModel(dto)
+        fun toEntity(model: PlacedObject): PlacedObjectDTO = instance.toDTO(model)
     }
 }

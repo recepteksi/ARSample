@@ -1,5 +1,6 @@
 package com.trendhive.arsample.domain.usecase
 
+import com.trendhive.arsample.domain.exception.ValidationException
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.ModelType
 import com.trendhive.arsample.domain.repository.ARObjectRepository
@@ -21,14 +22,14 @@ class ImportObjectUseCaseTest {
     fun `should return failure when uri is blank`() = runTest {
         val result = useCase("", "name", ModelType.GLB)
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(result.exceptionOrNull() is ValidationException)
     }
 
     @Test
     fun `should return failure when name is blank`() = runTest {
-        val result = useCase("uri", "", ModelType.GLB)
+        val result = useCase("content://test/model.glb", "", ModelType.GLB)
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(result.exceptionOrNull() is ValidationException)
     }
 
     @Test

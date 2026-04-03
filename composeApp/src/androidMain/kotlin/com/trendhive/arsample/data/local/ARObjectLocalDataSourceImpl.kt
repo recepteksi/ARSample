@@ -1,7 +1,7 @@
 package com.trendhive.arsample.data.local
 
+import com.trendhive.arsample.data.dto.ARObjectDTO
 import com.trendhive.arsample.data.mapper.ARObjectMapper
-import com.trendhive.arsample.data.mapper.ARObjectEntity
 import com.trendhive.arsample.domain.model.ARObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,24 +17,26 @@ class ARObjectLocalDataSourceImpl(
         prettyPrint = true
         ignoreUnknownKeys = true
     }
+    
+    private val mapper = ARObjectMapper()
 
     private val objectsFile: File
         get() = File(cacheDir, "ar_objects.json")
 
-    private var cachedObjects: MutableList<ARObjectEntity>? = null
+    private var cachedObjects: MutableList<ARObjectDTO>? = null
 
-    private suspend fun loadObjects(): MutableList<ARObjectEntity> = withContext(Dispatchers.IO) {
+    private suspend fun loadObjects(): MutableList<ARObjectDTO> = withContext(Dispatchers.IO) {
         cachedObjects?.let { return@withContext it }
 
         if (!objectsFile.exists()) {
-            val empty = mutableListOf<ARObjectEntity>()
+            val empty = mutableListOf<ARObjectDTO>()
             cachedObjects = empty
             return@withContext empty
         }
 
         try {
             val jsonString = objectsFile.readText()
-            val list: List<ARObjectEntity> = json.decodeFromString(jsonString)
+            val list: List<ARObjectDTO> = json.decodeFromString(jsonString)
             cachedObjects = list.toMutableList()
         } catch (e: Exception) {
             println("Error loading objects: ${e.message}")
@@ -43,7 +45,7 @@ class ARObjectLocalDataSourceImpl(
         cachedObjects!!
     }
 
-    private suspend fun saveObjects(objects: List<ARObjectEntity>) = withContext(Dispatchers.IO) {
+    private suspend fun saveObjects(objects: List<ARObjectDTO>) = withContext(Dispatchers.IO) {
         try {
             val jsonString = json.encodeToString(objects)
             objectsFile.writeText(jsonString)
@@ -55,22 +57,22 @@ class ARObjectLocalDataSourceImpl(
     }
 
     override suspend fun getAllObjects(): List<ARObject> {
-        return loadObjects().map { ARObjectMapper.toDomain(it) }
+        return loadObjects().map { mapper.toModel(it) }
     }
 
     override suspend fun getObjectById(id: String): ARObject? {
-        return loadObjects().find { it.id == id }?.let { ARObjectMapper.toDomain(it) }
+        return loadObjects().find { it.id == id }?.let { mapper.toModel(it) }
     }
 
     override suspend fun saveObject(obj: ARObject) {
         val objects = loadObjects()
         val existingIndex = objects.indexOfFirst { it.id == obj.id }
-        val entity = ARObjectMapper.toEntity(obj)
+        val dto = mapper.toDTO(obj)
 
         if (existingIndex >= 0) {
-            objects[existingIndex] = entity
+            objects[existingIndex] = dto
         } else {
-            objects.add(entity)
+            objects.add(dto)
         }
         saveObjects(objects)
     }

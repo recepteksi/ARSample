@@ -1,8 +1,9 @@
 package com.trendhive.arsample.domain.repository
 
+import com.trendhive.arsample.domain.base.BaseRepository
 import com.trendhive.arsample.domain.model.ARObject
 
-interface ARObjectRepository {
+interface ARObjectRepository : BaseRepository {
     suspend fun getAllObjects(): List<ARObject>
     suspend fun getObjectById(id: String): ARObject?
     suspend fun saveObject(obj: ARObject)
