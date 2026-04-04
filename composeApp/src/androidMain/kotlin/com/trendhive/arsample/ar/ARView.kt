@@ -3,8 +3,18 @@ package com.trendhive.arsample.ar
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.ViewConfiguration
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
@@ -13,14 +23,19 @@ import com.google.ar.core.Plane
 import com.google.ar.core.TrackingState
 import com.trendhive.arsample.domain.model.PlacedObject
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
+import io.github.sceneview.node.ModelNode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 private const val TAG = "ARView"
 
@@ -28,7 +43,9 @@ private const val TAG = "ARView"
 private const val HIT_TEST_MIN_DISTANCE = 0.1f
 private const val HIT_TEST_MAX_DISTANCE = 10.0f
 private const val HIT_TEST_MIN_CONFIDENCE = 0.5f
-private const val TAP_DEBOUNCE_TIME_MS = 300L
+
+// Placement gesture configuration
+private const val LONG_PRESS_THRESHOLD_MS = 500L
 
 // Scale configuration constants
 private const val DEFAULT_SCALE = 0.3f
@@ -50,9 +67,19 @@ fun ARView(
     val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
     
+    val coroutineScope = rememberCoroutineScope()
+
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
     val currentNodes = remember { mutableMapOf<String, ModelNode>() }
-    var lastTapTime by remember { mutableStateOf(0L) }
+
+    // Long-press placement state
+    var touchDownTimeMs by remember { mutableStateOf<Long?>(null) }
+    var touchDownPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+    var holdProgress by remember { mutableStateOf(0f) }
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    var isHoldActive by remember { mutableStateOf(false) }
+    var isHoldCancelled by remember { mutableStateOf(false) }
+
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
@@ -154,15 +181,14 @@ fun ARView(
         }
     }
 
-    fun shouldProcessTap(currentTime: Long): Boolean {
-        val timeSinceLastTap = currentTime - lastTapTime
-        return if (timeSinceLastTap >= TAP_DEBOUNCE_TIME_MS) {
-            lastTapTime = currentTime
-            true
-        } else {
-            Log.d(TAG, "Tap ignored due to debouncing (${timeSinceLastTap}ms since last tap)")
-            false
-        }
+    fun cancelHoldFeedback() {
+        holdJob?.cancel()
+        holdJob = null
+        touchDownTimeMs = null
+        touchDownPosition = null
+        holdProgress = 0f
+        isHoldActive = false
+        isHoldCancelled = false
     }
 
     LaunchedEffect(placedObjects, arSceneView) {
@@ -231,111 +257,196 @@ fun ARView(
         }
     }
 
-    AndroidView(
-        factory = { context ->
-            ARSceneView(context).apply {
-                sessionConfiguration = { session, config ->
-                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                    config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                        config.depthMode = Config.DepthMode.AUTOMATIC
-                    }
-                }
+    val indicatorSize = 48.dp
+    val indicatorRadiusPx = with(LocalDensity.current) { (indicatorSize / 2).roundToPx() }
 
-                scaleGestureDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    override fun onScale(detector: ScaleGestureDetector): Boolean {
-                        selectedNodeId?.let { nodeId ->
-                            currentNodes[nodeId]?.let { node ->
-                                val newScale = min(MAX_SCALE, max(MIN_SCALE, currentScale * detector.scaleFactor))
-                                currentScale = newScale
-                                node.scale = Scale(newScale, newScale, newScale)
-                                Log.d(TAG, "Scaling object $nodeId to $newScale")
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { context ->
+                val touchSlopPx = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+
+                ARSceneView(context).apply {
+                    sessionConfiguration = { session, config ->
+                        config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                        config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                        if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                            config.depthMode = Config.DepthMode.AUTOMATIC
+                        }
+                    }
+
+                    scaleGestureDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                        override fun onScale(detector: ScaleGestureDetector): Boolean {
+                            selectedNodeId?.let { nodeId ->
+                                currentNodes[nodeId]?.let { node ->
+                                    val newScale = min(MAX_SCALE, max(MIN_SCALE, currentScale * detector.scaleFactor))
+                                    currentScale = newScale
+                                    node.scale = Scale(newScale, newScale, newScale)
+                                    Log.d(TAG, "Scaling object $nodeId to $newScale")
+                                }
+                            }
+                            return true
+                        }
+
+                        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                            selectedNodeId = currentNodes.entries.firstOrNull()?.key
+                            selectedNodeId?.let { nodeId ->
+                                currentNodes[nodeId]?.let { node ->
+                                    currentScale = node.scale.x
+                                }
+                            }
+                            return true
+                        }
+
+                        override fun onScaleEnd(detector: ScaleGestureDetector) {
+                            selectedNodeId?.let { nodeId ->
+                                currentOnObjectScaleChanged(nodeId, currentScale)
+                                Log.d(TAG, "Scale ended for $nodeId with scale $currentScale")
                             }
                         }
-                        return true
-                    }
-                    
-                    override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-                        selectedNodeId = currentNodes.entries.firstOrNull()?.key
-                        selectedNodeId?.let { nodeId ->
-                            currentNodes[nodeId]?.let { node ->
-                                currentScale = node.scale.x
-                            }
-                        }
-                        return true
-                    }
-                    
-                    override fun onScaleEnd(detector: ScaleGestureDetector) {
-                        selectedNodeId?.let { nodeId ->
-                            currentOnObjectScaleChanged(nodeId, currentScale)
-                            Log.d(TAG, "Scale ended for $nodeId with scale $currentScale")
-                        }
-                    }
-                })
+                    })
 
-                onTouchEvent = touchEvent@{ e, _ ->
-                    scaleGestureDetector?.onTouchEvent(e)
-                    
-                    if (scaleGestureDetector?.isInProgress == true) {
-                        return@touchEvent true
-                    }
-                    
-                    if (e.action == MotionEvent.ACTION_UP) {
-                        val currentTime = System.currentTimeMillis()
-                        
-                        if (!shouldProcessTap(currentTime)) {
-                            return@touchEvent true
-                        }
-                        
+                    fun performHitTestAndPlace(x: Float, y: Float) {
                         if (!isValidModelPath(currentModelPath)) {
                             Log.w(TAG, "Cannot place object: no valid model selected (currentModelPath=$currentModelPath)")
-                            return@touchEvent true
+                            return
                         }
-                        
+
                         val frame = getARFrameSafely(this)
                         if (frame == null) {
                             Log.w(TAG, "Cannot perform hit test: AR frame unavailable")
-                            return@touchEvent true
+                            return
                         }
-                        
+
                         val hitResults = try {
-                            frame.hitTest(e.x, e.y)
+                            frame.hitTest(x, y)
                         } catch (ex: Exception) {
                             Log.e(TAG, "Hit test failed: ${ex.message}", ex)
                             emptyList()
                         }
-                        
+
                         if (hitResults.isEmpty()) {
                             Log.d(TAG, "No surfaces detected")
-                            return@touchEvent true
+                            return
                         }
-                        
+
                         val validHits = filterHitResults(hitResults)
-                        
+
                         if (validHits.isEmpty()) {
                             Log.d(TAG, "No valid planes found")
-                            return@touchEvent true
+                            return
                         }
-                        
+
                         val bestHit = validHits.first()
                         val plane = bestHit.trackable as Plane
                         val pose = bestHit.hitPose
-                        
+
                         Log.d(
                             TAG,
                             "Placing model on ${plane.type} plane at (${pose.tx()}, ${pose.ty()}, ${pose.tz()}) with scale $DEFAULT_SCALE"
                         )
-                        
+
                         currentModelPath?.let { path ->
                             currentOnModelPlaced(path, pose.tx(), pose.ty(), pose.tz(), DEFAULT_SCALE)
                         }
                     }
-                    true
+
+                    onTouchEvent = touchEvent@{ e, _ ->
+                        // Always feed scale detector first so pinch-to-zoom works.
+                        scaleGestureDetector?.onTouchEvent(e)
+
+                        // If scaling (or multi-touch), cancel any hold feedback and do nothing else.
+                        if (scaleGestureDetector?.isInProgress == true || e.pointerCount > 1) {
+                            if (isHoldActive) {
+                                cancelHoldFeedback()
+                            }
+                            return@touchEvent true
+                        }
+
+                        when (e.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                isHoldActive = true
+                                isHoldCancelled = false
+                                touchDownTimeMs = System.currentTimeMillis()
+                                touchDownPosition = e.x to e.y
+                                holdProgress = 0f
+
+                                holdJob?.cancel()
+                                holdJob = coroutineScope.launch {
+                                    while (isHoldActive && !isHoldCancelled) {
+                                        val downTime = touchDownTimeMs ?: break
+                                        val elapsed = System.currentTimeMillis() - downTime
+                                        holdProgress = min(1f, elapsed.toFloat() / LONG_PRESS_THRESHOLD_MS.toFloat())
+
+                                        if (holdProgress >= 1f) break
+                                        delay(16)
+                                    }
+                                }
+
+                                true
+                            }
+
+                            MotionEvent.ACTION_MOVE -> {
+                                val start = touchDownPosition
+                                if (isHoldActive && start != null) {
+                                    val dx = e.x - start.first
+                                    val dy = e.y - start.second
+                                    if (hypot(dx, dy) > touchSlopPx) {
+                                        Log.d(TAG, "Hold cancelled due to movement (>${touchSlopPx}px)")
+                                        isHoldCancelled = true
+                                        cancelHoldFeedback()
+                                    }
+                                }
+                                true
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                val downTime = touchDownTimeMs
+                                val start = touchDownPosition
+                                val holdDuration = if (downTime != null) System.currentTimeMillis() - downTime else 0L
+                                val shouldPlace = isHoldActive && !isHoldCancelled && holdDuration >= LONG_PRESS_THRESHOLD_MS
+
+                                cancelHoldFeedback()
+
+                                if (shouldPlace && start != null) {
+                                    performHitTestAndPlace(start.first, start.second)
+                                } else {
+                                    Log.d(TAG, "Ignoring tap: holdDuration=${holdDuration}ms (threshold=${LONG_PRESS_THRESHOLD_MS}ms)")
+                                }
+
+                                true
+                            }
+
+                            MotionEvent.ACTION_CANCEL -> {
+                                cancelHoldFeedback()
+                                true
+                            }
+
+                            else -> true
+                        }
+                    }
+
+                    arSceneView = this
                 }
-                arSceneView = this
-            }
-        },
-        modifier = modifier,
-        update = {}
-    )
+            },
+            modifier = Modifier.fillMaxSize(),
+            update = {}
+        )
+
+        // Visual feedback: show a small determinate progress indicator under the finger.
+        val holdPos = touchDownPosition
+        if (isHoldActive && holdPos != null) {
+            CircularProgressIndicator(
+                progress = holdProgress,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset {
+                        IntOffset(
+                            (holdPos.first - indicatorRadiusPx).roundToInt(),
+                            (holdPos.second - indicatorRadiusPx).roundToInt()
+                        )
+                    }
+                    .size(indicatorSize)
+            )
+        }
+    }
 }

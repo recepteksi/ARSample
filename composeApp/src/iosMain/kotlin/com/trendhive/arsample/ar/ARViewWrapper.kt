@@ -4,7 +4,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitView
 import com.trendhive.arsample.domain.model.PlacedObject
-import platform.UIKit.UITapGestureRecognizer
+import platform.UIKit.UIGestureRecognizerStateEnded
+import platform.UIKit.UILongPressGestureRecognizer
 import platform.Foundation.NSSelectorFromString
 import platform.ARKit.*
 import platform.CoreGraphics.CGRectMake
@@ -30,50 +31,45 @@ fun ARViewWrapper(
 ) {
     var arView by remember { mutableStateOf<ARSCNView?>(null) }
     
-    val tapHandler = remember {
-        TapHandler { gesture ->
+    val longPressHandler = remember {
+        LongPressHandler { recognizer ->
+            if (recognizer.state != UIGestureRecognizerStateEnded) return@LongPressHandler
+
             val view = arView ?: run {
                 println("$TAG: WARNING - ARView not initialized")
-                return@TapHandler
+                return@LongPressHandler
             }
-            
-            val location = gesture.locationInView(view)
-            println("$TAG: Tap detected")
-            
+
+            val location = recognizer.locationInView(view)
+            println("$TAG: Long press ended")
+
             // Use ARKit hitTest API for plane detection
             try {
                 val hitResults = view.hitTest(
                     location,
                     ARHitTestResultTypeExistingPlaneUsingExtent
                 )
-                
+
                 if (hitResults.count().toInt() == 0) {
-                    println("$TAG: No plane detected at tap location")
-                    return@TapHandler
+                    println("$TAG: No plane detected at long-press location")
+                    return@LongPressHandler
                 }
-                
+
                 // Get first valid result
                 val firstResult = hitResults.firstOrNull() as? ARHitTestResult
                 if (firstResult == null) {
                     println("$TAG: WARNING - Hit test result not valid")
-                    return@TapHandler
+                    return@LongPressHandler
                 }
-                
+
                 // Extract world transform from result
                 val hitPose = firstResult.worldTransform
-                
-                // ARKit worldTransform is matrix_float4x4 (simd_float4x4)
-                // columns is CPointer<Vector128VarOf<Vector128>>
-                // Each column is 4 floats (16 bytes = 128 bits)
+
                 // Translation is in column 3 (index 3)
                 var posX = 0f
                 var posY = 0f
                 var posZ = 0f
                 hitPose.useContents {
-                    // columns is CPointer<Vector128VarOf<Vector128>>
-                    // Reinterpret as float pointer to access individual values
-                    // Matrix layout: [col0(4 floats), col1(4 floats), col2(4 floats), col3(4 floats)]
-                    // Translation (col3): indices 12, 13, 14
                     val floatPtr = columns.reinterpret<kotlinx.cinterop.FloatVar>()
                     posX = floatPtr[12]
                     posY = floatPtr[13]
@@ -82,9 +78,9 @@ fun ARViewWrapper(
 
                 val pathToPlace = modelPathToLoad ?: run {
                     println("$TAG: WARNING - No model path to load")
-                    return@TapHandler
+                    return@LongPressHandler
                 }
-                
+
                 val defaultScale = 0.3f // Match Android default scale
                 println("$TAG: Placing model at position: x=$posX, y=$posY, z=$posZ, scale=$defaultScale")
                 onModelPlaced(pathToPlace, posX, posY, posZ, defaultScale)
@@ -121,13 +117,15 @@ fun ARViewWrapper(
             view.session.runWithConfiguration(config)
             println("$TAG: AR session started")
             
-            // Add tap gesture recognizer
-            val tapGesture = UITapGestureRecognizer(
-                target = tapHandler,
-                action = NSSelectorFromString("handleTap:")
-            )
-            view.addGestureRecognizer(tapGesture)
-            println("$TAG: Tap gesture added")
+            // Add long-press gesture recognizer (prevents accidental single-tap placement)
+            val longPressGesture = UILongPressGestureRecognizer(
+                target = longPressHandler,
+                action = NSSelectorFromString("handleLongPress:")
+            ).apply {
+                minimumPressDuration = 0.5 // 500ms
+            }
+            view.addGestureRecognizer(longPressGesture)
+            println("$TAG: Long press gesture added")
             
             arView = view
             view
@@ -137,9 +135,9 @@ fun ARViewWrapper(
 }
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-class TapHandler(private val onTap: (UITapGestureRecognizer) -> Unit) : NSObject() {
+class LongPressHandler(private val onLongPress: (UILongPressGestureRecognizer) -> Unit) : NSObject() {
     @ObjCAction
-    fun handleTap(gesture: UITapGestureRecognizer) {
-        onTap(gesture)
+    fun handleLongPress(gesture: UILongPressGestureRecognizer) {
+        onLongPress(gesture)
     }
 }
