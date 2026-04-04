@@ -1,0 +1,98 @@
+# SwiftLint Configuration for ARSample iOS App
+# https://realm.github.io/SwiftLint/
+
+# Disabled Rules - rules we don't want to enforce
+disabled_rules:
+  - trailing_whitespace  # Allow trailing whitespace for now
+  - todo                 # Allow TODO comments during development
+
+# Opt-in Rules - additional rules to enable
+opt_in_rules:
+  - empty_count          # Prefer isEmpty over count == 0
+  - empty_string         # Prefer isEmpty over == ""
+  - contains_over_first_not_nil  # Prefer contains over first(where:) != nil
+  - force_unwrapping     # Warning on force unwrapping (!)
+  - sorted_first_last    # Prefer min/max over sorted().first
+
+# Included paths
+included:
+  - iosApp
+  - Configuration
+
+# Excluded paths
+excluded:
+  - Pods
+  - DerivedData
+  - build
+  - .build
+  - iosApp.xcodeproj
+  - iosApp.xcworkspace
+
+# Line Length
+line_length:
+  warning: 120
+  error: 200
+  ignores_function_declarations: true
+  ignores_comments: true
+  ignores_urls: true
+
+# Function Body Length
+function_body_length:
+  warning: 60
+  error: 100
+
+# File Length
+file_length:
+  warning: 500
+  error: 1000
+  ignore_comment_only_lines: true
+
+# Type Body Length
+type_body_length:
+  warning: 300
+  error: 500
+
+# Identifier Name
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id
+    - x
+    - y
+    - z
+
+# Cyclomatic Complexity
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+# Nesting
+nesting:
+  type_level:
+    warning: 2
+  statement_level:
+    warning: 5
+
+# Custom Rules
+custom_rules:
+  # Discourage print statements in production code
+  no_print:
+    name: "No Print Statements"
+    regex: '\bprint\('
+    message: "Use proper logging instead of print()"
+    severity: warning
+    
+  # Ensure proper spacing
+  double_space:
+    name: "Double Space"
+    regex: '([a-z,A-Z] \s+)'
+    message: "Double space found"
+    severity: warning
+
+# Reporter
+reporter: "xcode"  # Use xcode reporter for Xcode integration
