@@ -59,15 +59,14 @@ fun ARView(
     onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
     modelPathToLoad: String? = null,
-    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> },
-    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
     // This prevents AndroidView factory closure from capturing stale lambda references
     val currentOnModelPlaced by rememberUpdatedState(onModelPlaced)
     val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
-
+    
     val coroutineScope = rememberCoroutineScope()
 
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
@@ -80,16 +79,6 @@ fun ARView(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var isHoldActive by remember { mutableStateOf(false) }
     var isHoldCancelled by remember { mutableStateOf(false) }
-
-    fun cancelHoldFeedback() {
-        holdJob?.cancel()
-        holdJob = null
-        touchDownTimeMs = null
-        touchDownPosition = null
-        holdProgress = 0f
-        isHoldActive = false
-        isHoldCancelled = false
-    }
 
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
@@ -192,6 +181,15 @@ fun ARView(
         }
     }
 
+    fun cancelHoldFeedback() {
+        holdJob?.cancel()
+        holdJob = null
+        touchDownTimeMs = null
+        touchDownPosition = null
+        holdProgress = 0f
+        isHoldActive = false
+        isHoldCancelled = false
+    }
 
     LaunchedEffect(placedObjects, arSceneView) {
         val view = arSceneView ?: return@LaunchedEffect
@@ -356,7 +354,7 @@ fun ARView(
                         // Always feed scale detector first so pinch-to-zoom works.
                         scaleGestureDetector?.onTouchEvent(e)
 
-                        // If scaling (or multi-touch), cancel hold and do nothing else.
+                        // If scaling (or multi-touch), cancel any hold feedback and do nothing else.
                         if (scaleGestureDetector?.isInProgress == true || e.pointerCount > 1) {
                             if (isHoldActive) {
                                 cancelHoldFeedback()

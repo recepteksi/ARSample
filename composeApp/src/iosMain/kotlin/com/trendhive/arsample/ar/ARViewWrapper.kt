@@ -4,11 +4,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitView
 import com.trendhive.arsample.domain.model.PlacedObject
+import platform.UIKit.UIGestureRecognizerStateEnded
+import platform.UIKit.UILongPressGestureRecognizer
 import platform.Foundation.NSSelectorFromString
 import platform.ARKit.*
 import platform.CoreGraphics.CGRectMake
-import platform.UIKit.UIGestureRecognizerStateEnded
-import platform.UIKit.UILongPressGestureRecognizer
 import platform.darwin.NSObject
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
@@ -32,17 +32,15 @@ fun ARViewWrapper(
     var arView by remember { mutableStateOf<ARSCNView?>(null) }
     
     val longPressHandler = remember {
-        LongPressHandler { gesture ->
-            if (gesture.state != UIGestureRecognizerStateEnded) {
-                return@LongPressHandler
-            }
+        LongPressHandler { recognizer ->
+            if (recognizer.state != UIGestureRecognizerStateEnded) return@LongPressHandler
 
             val view = arView ?: run {
                 println("$TAG: WARNING - ARView not initialized")
                 return@LongPressHandler
             }
 
-            val location = gesture.locationInView(view)
+            val location = recognizer.locationInView(view)
             println("$TAG: Long press ended")
 
             // Use ARKit hitTest API for plane detection
@@ -53,7 +51,7 @@ fun ARViewWrapper(
                 )
 
                 if (hitResults.count().toInt() == 0) {
-                    println("$TAG: No plane detected at press location")
+                    println("$TAG: No plane detected at long-press location")
                     return@LongPressHandler
                 }
 
