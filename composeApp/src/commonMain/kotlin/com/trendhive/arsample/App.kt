@@ -89,7 +89,8 @@ fun App(
                                 position = com.trendhive.arsample.domain.model.Vector3(x, y, z)
                             )
                         },
-                        onObjectRemoved = { arViewModel.removeObject(it) }
+                        onObjectRemoved = { arViewModel.removeObject(it) },
+                        onObjectDeleted = { objectListViewModel.deleteObject(it) }
                     )
                 }
             }

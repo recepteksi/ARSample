@@ -1,7 +1,14 @@
 package com.trendhive.arsample.presentation.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +36,7 @@ fun ARScreen(
     onImportObject: (uri: String, name: String, type: com.trendhive.arsample.domain.model.ModelType) -> Unit,
     onObjectPlaced: (objectId: String, posX: Float, posY: Float, posZ: Float) -> Unit,
     onObjectRemoved: (placedObjectId: String) -> Unit,
+    onObjectDeleted: (objectId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -172,6 +180,10 @@ fun ARScreen(
                         onSelectObject(it)
                         showObjectList = false
                     },
+                    onObjectDeleted = { id ->
+                        if (uiState.selectedObjectId == id) onSelectObject(null)
+                        onObjectDeleted(id)
+                    },
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -205,14 +217,53 @@ fun ARScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDeleteItem(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
+        content = { content() }
+    )
+}
+
 @Composable
 fun AvailableObjectsList(
     objects: List<ARObject>,
     selectedObjectId: String?,
     onObjectSelected: (String) -> Unit,
+    onObjectDeleted: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(Res.string.select_object),
             style = MaterialTheme.typography.titleLarge,
@@ -220,35 +271,100 @@ fun AvailableObjectsList(
         )
 
         if (objects.isEmpty()) {
-            Text(
-                text = stringResource(Res.string.no_imported_objects),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            objects.forEach { obj ->
-                ListItem(
-                    headlineContent = { Text(obj.name) },
-                    supportingContent = { Text(obj.modelType.name) },
-                    trailingContent = {
-                        if (obj.id == selectedObjectId) {
-                            Text(stringResource(Res.string.selected), color = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onObjectSelected(obj.id) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ViewInAr,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(Res.string.no_imported_objects),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(Res.string.tap_to_place),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        } else {
+            LazyColumn {
+                items(objects, key = { it.id }) { obj ->
+                    SwipeToDeleteItem(onDelete = { onObjectDeleted(obj.id) }) {
+                        ObjectListItem(
+                            arObject = obj,
+                            isSelected = obj.id == selectedObjectId,
+                            onClick = { onObjectSelected(obj.id) }
+                        )
+                    }
+                }
 
-        Spacer(modifier = Modifier.height(32.dp))
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(Res.string.tap_to_place),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ObjectListItem(
+    arObject: ARObject,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ViewInAr,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = arObject.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = arObject.modelType.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }
 
@@ -258,7 +374,7 @@ fun PlacedObjectsList(
     onRemove: (placedObjectId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(Res.string.placed_objects),
             style = MaterialTheme.typography.titleLarge,
@@ -266,28 +382,76 @@ fun PlacedObjectsList(
         )
 
         if (placedObjects.isEmpty()) {
-            Text(
-                text = stringResource(Res.string.no_placed_objects),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            placedObjects.forEach { obj ->
-                ListItem(
-                    headlineContent = { Text("Object ${obj.objectId.take(8)}…") },
-                    supportingContent = {
-                        Text("Position: (${obj.position.x}, ${obj.position.y}, ${obj.position.z})")
-                    },
-                    trailingContent = {
-                        TextButton(onClick = { onRemove(obj.objectId) }) {
-                            Text(stringResource(Res.string.remove))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ViewInAr,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(Res.string.no_placed_objects),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
+        } else {
+            LazyColumn {
+                items(placedObjects, key = { it.objectId }) { obj ->
+                    SwipeToDeleteItem(onDelete = { onRemove(obj.objectId) }) {
+                        PlacedObjectListItem(obj = obj)
+                    }
+                }
 
-        Spacer(modifier = Modifier.height(32.dp))
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlacedObjectListItem(
+    obj: PlacedObject
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ViewInAr,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Object ${obj.arObjectId.take(8)}…",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "(${obj.position.x}, ${obj.position.y}, ${obj.position.z})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = stringResource(Res.string.remove),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
