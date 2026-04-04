@@ -1,5 +1,7 @@
 package com.trendhive.arsample.core.base
 
+import com.trendhive.arsample.domain.base.BaseModel
+
 /**
  * Base abstract class for mappers (DTO ↔ Model).
  */
