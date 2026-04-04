@@ -39,6 +39,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       
+      - name: Remove local Java home setting
+        run: sed -i '' '/org.gradle.java.home/d' gradle.properties
+      
       - name: Build KMP iOS framework
         run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64
         
