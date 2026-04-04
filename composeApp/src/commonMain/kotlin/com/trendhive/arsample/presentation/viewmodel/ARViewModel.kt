@@ -135,6 +135,32 @@ class ARViewModel(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    /**
+     * Update a placed object's position after it was moved in the native AR view.
+     *
+     * Triggered by SceneView's node drag callbacks (onMoveEnd).
+     */
+    fun updateObjectPosition(placedObjectId: String, x: Float, y: Float, z: Float) {
+        val newPosition = Vector3(x, y, z)
+
+        // Optimistic UI update (keeps state in sync with the dragged node).
+        _uiState.value = _uiState.value.copy(
+            currentScene = _uiState.value.currentScene?.let { scene ->
+                scene.copy(
+                    objects = scene.objects.map { obj ->
+                        if (obj.objectId == placedObjectId) obj.copy(position = newPosition) else obj
+                    }
+                )
+            },
+            placedObjects = _uiState.value.placedObjects.map { obj ->
+                if (obj.objectId == placedObjectId) obj.copy(position = newPosition) else obj
+            }
+        )
+
+        // Persist & reconcile with repository state.
+        moveObject(placedObjectId, newPosition)
+    }
+
     // ==================== Drag Operations ====================
 
     /**

@@ -29,6 +29,7 @@ fun ARScreen(
     onImportObject: (uri: String, name: String, type: com.trendhive.arsample.domain.model.ModelType) -> Unit,
     onObjectPlaced: (objectId: String, posX: Float, posY: Float, posZ: Float) -> Unit,
     onObjectRemoved: (placedObjectId: String) -> Unit,
+    onObjectPositionChanged: (placedObjectId: String, x: Float, y: Float, z: Float) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -94,7 +95,8 @@ fun ARScreen(
                     }
                 },
                 onModelRemoved = onObjectRemoved,
-                modelPathToLoad = selectedObject?.modelUri
+                modelPathToLoad = selectedObject?.modelUri,
+                onObjectPositionChanged = onObjectPositionChanged
             )
 
             // Loading indicator
