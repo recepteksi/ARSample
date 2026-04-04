@@ -9,7 +9,7 @@ Central documentation containing 6 agent definitions and task specifications.
 | 1 | [Design & Analysis](./design-analysis-agent.md) | Web research, AR examples, design | Design document |
 | 2 | [Android Expert](./android-expert-agent.md) | ARCore research, Android report | Android report |
 | 3 | [iOS Expert](./ios-expert-agent.md) | ARKit research, iOS report | iOS report |
-| 4 | [Main Developer](./main-developer-agent.md) | Code development (domain, data, presentation) | Code files |
+| 4 | [Main Developer](./main-developer-agent.md) | Code development (domain, application, infrastructure, presentation) | Code files |
 | 5 | [Test Developer](./test-developer-agent.md) | Unit testing | Test files |
 | 6 | [Code Reviewer](./code-reviewer-agent.md) | Code standards verification | Review report |
 
@@ -35,7 +35,13 @@ Main Developer (fixes)
 
 **Project:** Sample application for importing, placing, and removing 3D objects using ARCore (Android) and ARKit (iOS).
 
-**Architecture:** DDD + Clean Architecture + MVVM
+**Architecture:** DDD (Domain-Driven Design) + Clean Architecture + MVVM
+
+**Layers:**
+- **Domain:** Pure business logic (entities, value objects, repository interfaces)
+- **Application:** Use cases and orchestration (business workflows)
+- **Infrastructure:** Technical implementations (database, file system, AR platform)
+- **Presentation:** User interface (ViewModels, UI screens)
 
 **Platform:** Kotlin Multiplatform (Android + iOS)
 

@@ -52,29 +52,73 @@ Conduct web research to collect best practices for ARCore/ARKit applications, 3D
 
 ---
 
+## DDD Principles (Eric Evans)
+
+### Layer Responsibilities
+
+**1. Domain Layer** (Pure Business Logic)
+- Entities (ARObject, ARScene, PlacedObject)
+- Value Objects (ModelUri, ObjectName)
+- Repository Interfaces (ARObjectRepository, ARSceneRepository)
+- Domain Exceptions
+- NO dependencies on other layers
+- NO frameworks, NO persistence code
+
+**2. Application Layer** (Use Cases & Orchestration)
+- Use Cases (business workflows)
+- Application Services (complex orchestration)
+- Input/Output DTOs
+- Orchestrates domain objects
+- Depends ONLY on domain layer
+
+**3. Infrastructure Layer** (Technical Implementations)
+- Repository Implementations
+- Database access (DTOs, Mappers, DataSources)
+- File system operations
+- AR platform integrations (ARCore, ARKit)
+- Depends on domain layer
+
+**4. Presentation Layer** (User Interface)
+- ViewModels
+- UI Screens (Compose)
+- UI Components
+- Depends on application and domain layers
+
+### Dependency Flow
+```
+Presentation → Application → Domain ← Infrastructure
+```
+
+---
+
 ## Clean Architecture Layer Organization
 
 ```
 composeApp/src/
 ├── commonMain/kotlin/com/trendhive/arsample/
-│   ├── domain/
-│   │   ├── model/           # Domain Entities
-│   │   ├── repository/      # Abstract Repository Interfaces
-│   │   └── usecase/         # Business Logic
-│   ├── data/
-│   │   ├── repository/      # Concrete Implementations
-│   │   ├── local/           # Local Storage
-│   │   └── mapper/          # Data <-> Domain Mappers
-│   └── presentation/
-│       ├── viewmodel/       # ViewModels
-│       ├── ui/screens/      # Compose UI Screens
-│       └── ui/components/   # Reusable Components
+│   ├── domain/                          # Domain Layer (Pure Business Logic)
+│   │   ├── model/                       # Entities & Value Objects
+│   │   ├── repository/                  # Repository Interfaces ONLY
+│   │   └── exception/                   # Domain Exceptions
+│   ├── application/                     # Application Layer (NEW)
+│   │   ├── usecase/                     # Business Workflows
+│   │   ├── service/                     # Complex Orchestration
+│   │   └── dto/                         # Input/Output DTOs
+│   ├── infrastructure/                  # Infrastructure Layer
+│   │   └── persistence/
+│   │       ├── repository/              # Repository Implementations
+│   │       ├── datasource/              # Data Sources (interfaces)
+│   │       ├── dto/                     # Database DTOs
+│   │       └── mapper/                  # DTO ↔ Model Mappers
+│   └── presentation/                    # Presentation Layer
+│       ├── viewmodel/                   # ViewModels
+│       └── ui/screens/                  # Compose UI Screens
 ├── androidMain/kotlin/.../
-│   ├── data/repository/     # ARCore implementation
-│   └── ar/                 # ARCore Session, ARSceneView
+│   ├── infrastructure/persistence/      # Android implementations
+│   └── ar/                              # ARCore Session, ARSceneView
 └── iosMain/kotlin/.../
-    ├── data/repository/     # ARKit implementation
-    └── ar/                 # ARView Wrapper
+    ├── infrastructure/persistence/      # iOS implementations
+    └── ar/                              # ARView Wrapper
 ```
 
 ---

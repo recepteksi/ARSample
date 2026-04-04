@@ -1,6 +1,6 @@
 ---
 name: main-developer-agent
-description: Core code development - domain, data, presentation layers and AR implementation
+description: Core code development - domain, application, infrastructure, presentation layers and AR implementation
 type: reference
 ---
 
@@ -153,7 +153,7 @@ interface ARSceneRepository : BaseRepository {
 
 **Use Cases (Flutter-inspired pattern with Input/Output):**
 ```kotlin
-// commonMain/kotlin/com/trendhive/arsample/domain/usecase/
+// commonMain/kotlin/com/trendhive/arsample/application/usecase/
 // Use case interfaces
 interface ImportObjectUseCaseInterface : BaseUseCase<ImportObjectInput, ARObject>
 interface GetAllObjectsUseCaseInterface : BaseUseCase<Unit, List<ARObject>>
@@ -242,11 +242,100 @@ class SaveSceneUseCase(private val sceneRepository: ARSceneRepository) {
 
 ---
 
-### 2. Data Layer (Flutter-inspired pattern)
+### 2. Application Layer (NEW - DDD Pattern)
+
+**Layer Rules:**
+- ✅ Orchestrates domain objects and repositories
+- ✅ Contains use cases (business workflows)
+- ✅ Application services for coordination
+- ✅ Input/Output DTOs for use cases
+- ✅ Depends ONLY on domain layer
+- ❌ NO domain logic here (only orchestration)
+- ❌ NO infrastructure dependencies
+
+**Use Case Pattern:**
+```kotlin
+// commonMain/kotlin/com/trendhive/arsample/application/usecase/
+// Each use case: Interface + Implementation
+interface ImportObjectUseCaseInterface : BaseUseCase<ImportObjectInput, ARObject>
+
+class ImportObjectUseCase(
+    private val repository: ARObjectRepository  // Domain interface
+) : ImportObjectUseCaseInterface {
+    override suspend fun invoke(input: ImportObjectInput): Result<ARObject> {
+        // 1. Validate using domain Value Objects
+        val nameResult = ObjectName.create(input.name)
+        if (nameResult.isFailure) return Result.failure(nameResult.exceptionOrNull()!!)
+        
+        val uriResult = ModelUri.create(input.uri)
+        if (uriResult.isFailure) return Result.failure(uriResult.exceptionOrNull()!!)
+        
+        // 2. Orchestrate domain repository
+        return repository.importObject(input.uri, input.name, input.modelType)
+    }
+}
+
+// Input/Output models in application layer
+data class ImportObjectInput(
+    val uri: String,
+    val name: String,
+    val modelType: ModelType
+) : BaseModel
+```
+
+**Application Services (Complex Workflows):**
+```kotlin
+// commonMain/kotlin/com/trendhive/arsample/application/service/
+class ARSceneService(
+    private val sceneRepository: ARSceneRepository,
+    private val objectRepository: ARObjectRepository
+) {
+    suspend fun placeObjectWithValidation(
+        sceneId: String,
+        objectId: String,
+        position: Vector3
+    ): Result<ARScene> {
+        // Multi-step orchestration
+        val objectResult = objectRepository.getObjectById(objectId)
+        if (objectResult.isFailure) return Result.failure(objectResult.exceptionOrNull()!!)
+        
+        val sceneResult = sceneRepository.getCurrentScene()
+        if (sceneResult.isFailure) return Result.failure(sceneResult.exceptionOrNull()!!)
+        
+        // Business rule: Max 10 objects per scene
+        val scene = sceneResult.getOrNull()
+        if (scene != null && scene.placedObjects.size >= 10) {
+            return Result.failure(ValidationException("Scene is full"))
+        }
+        
+        val placedObject = PlacedObject(
+            id = generateId(),
+            arObjectId = objectId,
+            position = position,
+            rotation = Quaternion(0f, 0f, 0f, 1f),
+            scale = 1f
+        )
+        
+        return sceneRepository.addObjectToScene(sceneId, placedObject)
+    }
+}
+```
+
+---
+
+### 3. Infrastructure Layer (Renamed from Data Layer)
+
+**Layer Rules:**
+- ✅ Technical implementations (database, file system, AR platform)
+- ✅ Repository implementations (ARObjectRepositoryImpl)
+- ✅ Data sources (local storage, file system)
+- ✅ DTOs and Mappers
+- ✅ Depends on domain layer
+- ❌ NO business logic here
 
 **DTOs (Data Transfer Objects):**
 ```kotlin
-// commonMain/kotlin/com/trendhive/arsample/data/dto/
+// commonMain/kotlin/com/trendhive/arsample/infrastructure/persistence/dto/
 @Serializable
 data class ARObjectDTO(
     val id: String,
@@ -281,7 +370,7 @@ data class ARSceneDTO(
 
 **Mappers (DTO ↔ Model transformation):**
 ```kotlin
-// commonMain/kotlin/com/trendhive/arsample/data/mapper/
+// commonMain/kotlin/com/trendhive/arsample/infrastructure/persistence/mapper/
 class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
     override fun toDTO(model: ARObject): ARObjectDTO {
         return ARObjectDTO(
@@ -335,7 +424,7 @@ class ARSceneMapper(
 
 **Repository Implementations (with error handling):**
 ```kotlin
-// commonMain/kotlin/com/trendhive/arsample/data/repository/
+// commonMain/kotlin/com/trendhive/arsample/infrastructure/persistence/repository/
 class ARObjectRepositoryImpl(
     private val localDataSource: ARObjectLocalDataSource,
     private val fileStorage: ModelFileStorage,
@@ -423,9 +512,9 @@ class ARObjectRepositoryImpl(
 }
 ```
 
-**Local Data Sources (interfaces):**
+**Data Source Interfaces:**
 ```kotlin
-// commonMain/kotlin/com/trendhive/arsample/data/local/
+// commonMain/kotlin/com/trendhive/arsample/infrastructure/persistence/datasource/
 interface ARObjectLocalDataSource {
     suspend fun getAllObjects(): List<ARObjectDTO>
     suspend fun getObjectById(id: String): ARObjectDTO?
@@ -497,15 +586,15 @@ sealed class ARUiState {
 
 ---
 
-## Dosya Yapısı (Flutter-inspired organization)
+## Project Structure (DDD Pattern - Eric Evans)
 
 ```
 composeApp/src/
 ├── commonMain/kotlin/com/trendhive/arsample/
-│   ├── domain/                          # Domain Layer
+│   ├── domain/                          # Domain Layer (Pure Business Logic)
 │   │   ├── base/
 │   │   │   ├── BaseModel.kt
-│   │   │   ├── BaseUseCase.kt
+│   │   │   ├── BaseUseCase.kt          # Marker interface
 │   │   │   ├── BaseRepository.kt
 │   │   │   └── BaseMapper.kt
 │   │   ├── exception/
@@ -513,7 +602,7 @@ composeApp/src/
 │   │   │   ├── ValidationException.kt
 │   │   │   ├── EntityNotFoundException.kt
 │   │   │   └── StorageException.kt
-│   │   ├── model/
+│   │   ├── model/                       # Entities & Value Objects
 │   │   │   ├── ARObject.kt
 │   │   │   ├── PlacedObject.kt
 │   │   │   ├── ARScene.kt
@@ -523,36 +612,44 @@ composeApp/src/
 │   │   │   └── valueobjects/
 │   │   │       ├── ModelUri.kt
 │   │   │       └── ObjectName.kt
-│   │   ├── repository/                  # Repository interfaces
-│   │   │   ├── ARObjectRepository.kt
-│   │   │   └── ARSceneRepository.kt
-│   │   └── usecase/                     # Use case interfaces
-│   │       ├── ImportObjectUseCase.kt
-│   │       ├── GetAllObjectsUseCase.kt
-│   │       ├── DeleteObjectUseCase.kt
-│   │       ├── PlaceObjectInSceneUseCase.kt
-│   │       ├── RemoveObjectFromSceneUseCase.kt
-│   │       ├── GetSceneUseCase.kt
-│   │       └── SaveSceneUseCase.kt
+│   │   └── repository/                  # Repository interfaces ONLY
+│   │       ├── ARObjectRepository.kt
+│   │       └── ARSceneRepository.kt
 │   │
-│   ├── data/                            # Data Layer
-│   │   ├── dto/
-│   │   │   ├── ARObjectDTO.kt
-│   │   │   ├── PlacedObjectDTO.kt
-│   │   │   └── ARSceneDTO.kt
-│   │   ├── mapper/
-│   │   │   ├── ARObjectMapper.kt
-│   │   │   ├── PlacedObjectMapper.kt
-│   │   │   └── ARSceneMapper.kt
-│   │   ├── repository/                  # Repository implementations
-│   │   │   ├── ARObjectRepositoryImpl.kt
-│   │   │   └── ARSceneRepositoryImpl.kt
-│   │   └── local/                       # Data source interfaces
-│   │       ├── ARObjectLocalDataSource.kt
-│   │       ├── ModelFileStorage.kt
-│   │       └── ARSceneDataStore.kt
+│   ├── application/                     # Application Layer (NEW - Use Cases)
+│   │   ├── usecase/                     # Business workflows
+│   │   │   ├── ImportObjectUseCase.kt
+│   │   │   ├── GetAllObjectsUseCase.kt
+│   │   │   ├── DeleteObjectUseCase.kt
+│   │   │   ├── PlaceObjectInSceneUseCase.kt
+│   │   │   ├── RemoveObjectFromSceneUseCase.kt
+│   │   │   ├── GetSceneUseCase.kt
+│   │   │   └── SaveSceneUseCase.kt
+│   │   ├── service/                     # Application services (complex workflows)
+│   │   │   └── ARSceneService.kt
+│   │   └── dto/                         # Input/Output DTOs for use cases
+│   │       ├── ImportObjectInput.kt
+│   │       └── PlaceObjectInput.kt
 │   │
-│   └── presentation/                    # Presentation Layer
+│   ├── infrastructure/                  # Infrastructure Layer (Technical Implementations)
+│   │   └── persistence/
+│   │       ├── dto/                     # Database DTOs
+│   │       │   ├── ARObjectDTO.kt
+│   │       │   ├── PlacedObjectDTO.kt
+│   │       │   └── ARSceneDTO.kt
+│   │       ├── mapper/                  # DTO ↔ Domain Model mappers
+│   │       │   ├── ARObjectMapper.kt
+│   │       │   ├── PlacedObjectMapper.kt
+│   │       │   └── ARSceneMapper.kt
+│   │       ├── repository/              # Repository implementations
+│   │       │   ├── ARObjectRepositoryImpl.kt
+│   │       │   └── ARSceneRepositoryImpl.kt
+│   │       └── datasource/              # Data source interfaces
+│   │           ├── ARObjectLocalDataSource.kt
+│   │           ├── ModelFileStorage.kt
+│   │           └── ARSceneDataStore.kt
+│   │
+│   └── presentation/                    # Presentation Layer (UI)
 │       ├── viewmodel/
 │       │   ├── ARViewModel.kt
 │       │   └── ObjectListViewModel.kt
@@ -565,8 +662,8 @@ composeApp/src/
 │               └── ObjectListItem.kt
 │
 ├── androidMain/kotlin/com/trendhive/arsample/
-│   ├── data/
-│   │   └── local/                       # Android implementations
+│   ├── infrastructure/
+│   │   └── persistence/                 # Android implementations
 │   │       ├── ARObjectLocalDataSourceImpl.kt
 │   │       ├── ModelFileStorageImpl.kt
 │   │       └── ARSceneDataStoreImpl.kt
@@ -576,8 +673,8 @@ composeApp/src/
 │   └── MainActivity.kt
 │
 └── iosMain/kotlin/com/trendhive/arsample/
-    ├── data/
-    │   └── local/                       # iOS implementations
+    ├── infrastructure/
+    │   └── persistence/                 # iOS implementations
     │       ├── ARObjectLocalDataSourceIOSImpl.kt
     │       ├── ModelFileStorageIOSImpl.kt
     │       └── ARSceneDataStoreIOSImpl.kt
@@ -635,31 +732,17 @@ Main Developer şu agentlarla işbirliği yapar:
 
 ---
 
-## Çıktı
+## Output Files
 
-- Domain katmanı dosyaları (base/, exception/, model/, repository/, usecase/)
-- Data katmanı dosyaları (dto/, mapper/, repository/, local/)
-- Presentation katmanı dosyaları (viewmodel/, ui/)
-- Platform-specific implementasyonlar (androidMain/, iosMain/)
-```kotlin
-// commonMain/kotlin/com/trendhive/arsample/data/local/
-interface ModelFileStorage {
-    suspend fun saveModel(data: ByteArray, fileName: String): String
-    suspend fun deleteModel(filePath: String)
-    suspend fun getModel(filePath: String): ByteArray?
-    fun listModels(): List<String>
-}
-
-interface ARSceneDataStore {
-    suspend fun saveScene(scene: ARScene)
-    suspend fun getScene(): ARScene?
-    suspend fun clearScene()
-}
-```
+- **Domain layer** (base/, exception/, model/, repository/)
+- **Application layer** (usecase/, service/, dto/)
+- **Infrastructure layer** (persistence/dto/, persistence/mapper/, persistence/repository/, persistence/datasource/)
+- **Presentation layer** (viewmodel/, ui/)
+- **Platform-specific** implementations (androidMain/, iosMain/)
 
 ---
 
-### 3. Presentation Layer (MVVM)
+### 4. Presentation Layer (MVVM)
 
 **ViewModels:**
 ```kotlin
@@ -765,21 +848,22 @@ class ARSessionManager {
 
 ---
 
-## Dosya Yapısı
+## Project Structure (Duplicate - Remove This Section)
 
 ```
 composeApp/src/
 ├── commonMain/kotlin/com/trendhive/arsample/
 │   ├── domain/
-│   │   ├── model/
+│   │   ├── model/                       # Entities & Value Objects
 │   │   │   ├── ARObject.kt
 │   │   │   ├── PlacedObject.kt
 │   │   │   ├── ARScene.kt
 │   │   │   ├── Vector3.kt
 │   │   │   └── Quaternion.kt
-│   │   ├── repository/
-│   │   │   ├── ARObjectRepository.kt
-│   │   │   └── ARSceneRepository.kt
+│   │   └── repository/                  # Repository interfaces
+│   │       ├── ARObjectRepository.kt
+│   │       └── ARSceneRepository.kt
+│   ├── application/                     # Use Cases (NEW)
 │   │   └── usecase/
 │   │       ├── ImportObjectUseCase.kt
 │   │       ├── GetAllObjectsUseCase.kt
@@ -788,15 +872,16 @@ composeApp/src/
 │   │       ├── RemoveObjectFromSceneUseCase.kt
 │   │       ├── GetCurrentSceneUseCase.kt
 │   │       └── SaveSceneUseCase.kt
-│   ├── data/
-│   │   ├── repository/
-│   │   │   ├── ARObjectRepositoryImpl.kt
-│   │   │   └── ARSceneRepositoryImpl.kt
-│   │   ├── local/
-│   │   │   ├── ModelFileStorage.kt
-│   │   │   └── ARSceneDataStore.kt
-│   │   └── mapper/
-│   │       └── ARObjectMapper.kt
+│   ├── infrastructure/                  # Repository Implementations
+│   │   └── persistence/
+│   │       ├── repository/
+│   │       │   ├── ARObjectRepositoryImpl.kt
+│   │       │   └── ARSceneRepositoryImpl.kt
+│   │       ├── datasource/
+│   │       │   ├── ModelFileStorage.kt
+│   │       │   └── ARSceneDataStore.kt
+│   │       └── mapper/
+│   │           └── ARObjectMapper.kt
 │   └── presentation/
 │       ├── viewmodel/
 │       │   ├── ARViewModel.kt
@@ -810,15 +895,15 @@ composeApp/src/
 │               ├── ObjectListItem.kt
 │               └── ImportDialog.kt
 ├── androidMain/kotlin/com/trendhive/arsample/
-│   ├── data/
-│   │   └── repository/
+│   ├── infrastructure/
+│   │   └── persistence/
 │   │       └── ARObjectRepositoryImpl.kt
 │   └── ar/
 │       ├── ARSessionManager.kt
 │       └── ARView.kt
 └── iosMain/kotlin/com/trendhive/arsample/
-    ├── data/
-    │   └── repository/
+    ├── infrastructure/
+    │   └── persistence/
     │       └── ARObjectRepositoryImpl.kt
     └── ar/
         ├── ARSessionManager.kt

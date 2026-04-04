@@ -200,16 +200,20 @@ iosApp/iosApp/
 │       │   └── ViewModels/
 │       │       ├── ARViewModel.swift
 │       │       └── ObjectListViewModel.swift
-│       ├── Domain/
-│       │   ├── Models/
-│       │   │   └── ARModel.swift
+│       ├── Application/
 │       │   └── UseCases/
 │       │       └── PlaceObjectUseCase.swift
-│       └── Data/
-│           ├── Storage/
-│           │   └── ModelStorageManager.swift
-│           └── Repositories/
-│               └── ARModelRepositoryImpl.swift
+│       ├── Domain/
+│       │   └── Models/
+│       │       └── ARModel.swift
+│       └── Infrastructure/
+│           ├── Persistence/
+│           │   ├── Storage/
+│           │   │   └── ModelStorageManager.swift
+│           │   └── Repositories/
+│           │       └── ARModelRepositoryImpl.swift
+│           └── AR/
+│               └── ARSessionManager.swift
 ├── Core/
 │   ├── Extensions/
 │   ├── Utilities/

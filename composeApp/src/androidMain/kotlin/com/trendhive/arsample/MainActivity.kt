@@ -4,9 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.trendhive.arsample.data.local.*
-import com.trendhive.arsample.data.repository.*
-import com.trendhive.arsample.domain.usecase.*
+import com.trendhive.arsample.infrastructure.persistence.local.*
+import com.trendhive.arsample.infrastructure.persistence.repository.*
+import com.trendhive.arsample.application.usecase.*
 import java.io.File
 
 class MainActivity : ComponentActivity() {

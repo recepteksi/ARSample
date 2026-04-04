@@ -3,9 +3,9 @@ package com.trendhive.arsample.presentation.viewmodel
 import com.trendhive.arsample.TestDataBuilders
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.ModelType
-import com.trendhive.arsample.domain.usecase.DeleteObjectUseCase
-import com.trendhive.arsample.domain.usecase.GetAllObjectsUseCase
-import com.trendhive.arsample.domain.usecase.ImportObjectUseCase
+import com.trendhive.arsample.application.usecase.DeleteObjectUseCase
+import com.trendhive.arsample.application.usecase.GetAllObjectsUseCase
+import com.trendhive.arsample.application.usecase.ImportObjectUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

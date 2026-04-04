@@ -250,25 +250,24 @@ fun listModels(): List<File> {
 
 ---
 
-## 8. Android-Specific Dosya Yapısı
+## 8. Android-Specific File Structure (DDD Pattern)
 
 ```
 composeApp/src/androidMain/
 ├── kotlin/com/trendhive/arsample/
-│   ├── data/
-│   │   ├── local/
-│   │   │   ├── ARDatabase.kt
-│   │   │   ├── dao/
-│   │   │   │   ├── ARModelDao.kt
-│   │   │   │   └── PlacedModelDao.kt
-│   │   │   └── entity/
-│   │   │       ├── ARModelEntity.kt
-│   │   │       └── PlacedModelEntity.kt
-│   │   └── repository/
-│   │       └── ARRepository.kt
-│   ├── domain/
-│   │   └── model/
-│   │       └── ARModel.kt
+│   ├── infrastructure/
+│   │   └── persistence/
+│   │       ├── database/
+│   │       │   ├── ARDatabase.kt
+│   │       │   ├── dao/
+│   │       │   │   ├── ARModelDao.kt
+│   │       │   │   └── PlacedModelDao.kt
+│   │       │   └── entity/
+│   │       │       ├── ARModelEntity.kt
+│   │       │       └── PlacedModelEntity.kt
+│   │       └── datasource/
+│   │           ├── ARObjectLocalDataSourceImpl.kt
+│   │           └── ModelFileStorageImpl.kt
 │   ├── presentation/
 │   │   ├── ARSceneView.kt
 │   │   ├── ARViewModel.kt

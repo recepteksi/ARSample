@@ -1,9 +1,9 @@
 package com.trendhive.arsample
 
 import androidx.compose.ui.window.ComposeUIViewController
-import com.trendhive.arsample.data.local.*
-import com.trendhive.arsample.data.repository.*
-import com.trendhive.arsample.domain.usecase.*
+import com.trendhive.arsample.infrastructure.persistence.local.*
+import com.trendhive.arsample.infrastructure.persistence.repository.*
+import com.trendhive.arsample.application.usecase.*
 import kotlinx.cinterop.ExperimentalForeignApi
 
 @OptIn(ExperimentalForeignApi::class)

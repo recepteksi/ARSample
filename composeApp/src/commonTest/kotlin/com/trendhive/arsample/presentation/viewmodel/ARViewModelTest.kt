@@ -6,11 +6,11 @@ import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.domain.model.Quaternion
 import com.trendhive.arsample.domain.model.Vector3
 import com.trendhive.arsample.domain.repository.ARSceneRepository
-import com.trendhive.arsample.domain.usecase.GetSceneUseCase
-import com.trendhive.arsample.domain.usecase.MoveObjectUseCase
-import com.trendhive.arsample.domain.usecase.PlaceObjectInSceneUseCase
-import com.trendhive.arsample.domain.usecase.RemoveObjectFromSceneUseCase
-import com.trendhive.arsample.domain.usecase.SaveSceneUseCase
+import com.trendhive.arsample.application.usecase.GetSceneUseCase
+import com.trendhive.arsample.application.usecase.MoveObjectUseCase
+import com.trendhive.arsample.application.usecase.PlaceObjectInSceneUseCase
+import com.trendhive.arsample.application.usecase.RemoveObjectFromSceneUseCase
+import com.trendhive.arsample.application.usecase.SaveSceneUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

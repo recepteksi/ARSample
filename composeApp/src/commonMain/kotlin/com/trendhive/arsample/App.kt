@@ -6,7 +6,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.trendhive.arsample.domain.usecase.*
+import com.trendhive.arsample.application.usecase.*
 import com.trendhive.arsample.presentation.ui.screens.ARScreen
 import com.trendhive.arsample.presentation.ui.screens.ObjectListScreen
 import com.trendhive.arsample.presentation.viewmodel.ARViewModel

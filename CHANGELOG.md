@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-04
+
+### Changed
+- **BREAKING**: Restructured project to proper 4-layer DDD architecture following Eric Evans' book
+  - Renamed `data/` → `infrastructure/` across all modules (commonMain, androidMain, iosMain, commonTest)
+  - Moved use cases: `domain/usecase/` → `application/usecase/`
+  - Moved BaseUseCase: `domain/base/BaseUseCase.kt` → `application/base/BaseUseCase.kt`
+  - Moved UseCaseTypes: `domain/model/UseCaseTypes.kt` → `application/dto/UseCaseTypes.kt`
+  - Moved BaseMapper: `domain/base/BaseMapper.kt` → `infrastructure/persistence/BaseMapper.kt`
+- Updated all import statements across 40+ files to reflect new structure
+- Updated multi-agent documentation (8 agent files) with DDD layer descriptions
+- Infrastructure now properly organized: `infrastructure/persistence/{dto,mapper,repository,datasource,BaseMapper}`
+
+### Technical
+- **Layer Dependencies** (Eric Evans DDD):
+  - Domain: Pure business logic (no dependencies)
+  - Application: Use cases (depends on Domain)
+  - Infrastructure: Technical implementations (depends on Application + Domain)
+  - Presentation: UI (depends on Application)
+- All builds verified: Android (assembleDebug), iOS (compileKotlinIosArm64), Tests (testDebugUnitTest)
+
+### Fixed
+- Import path corrections in ViewModels, repositories, and tests
+- Package declarations in test files after folder restructure
+
 ## [0.2.0] - 2026-04-03
 
 ### Added

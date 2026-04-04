@@ -119,7 +119,7 @@ class PlacedObjectTest {
 
 **UseCase Tests:**
 ```kotlin
-// commonTest/kotlin/com/trendhive/arsample/domain/usecase/
+// commonTest/kotlin/com/trendhive/arsample/application/usecase/
 class ImportObjectUseCaseTest {
     private lateinit var repository: ARObjectRepository
     private lateinit var useCase: ImportObjectUseCase
@@ -172,11 +172,11 @@ class GetAllObjectsUseCaseTest {
 
 ---
 
-### 2. Data Layer Tests
+### 2. Infrastructure Layer Tests
 
 **Repository Implementation Tests:**
 ```kotlin
-// commonTest/kotlin/com/trendhive/arsample/data/repository/
+// commonTest/kotlin/com/trendhive/arsample/infrastructure/persistence/repository/
 class ARObjectRepositoryImplTest {
     private lateinit var localDataSource: ARModelLocalDataSource
     private lateinit var fileStorage: ModelFileStorage
@@ -306,15 +306,22 @@ composeApp/src/
 │   │   │   ├── ARObjectTest.kt
 │   │   │   ├── PlacedObjectTest.kt
 │   │   │   └── ARSceneTest.kt
+│   │   └── valueobjects/
+│   │       ├── ModelUriTest.kt
+│   │       └── ObjectNameTest.kt
+│   ├── application/
 │   │   └── usecase/
 │   │       ├── ImportObjectUseCaseTest.kt
 │   │       ├── GetAllObjectsUseCaseTest.kt
 │   │       ├── PlaceObjectInSceneUseCaseTest.kt
 │   │       └── RemoveObjectFromSceneUseCaseTest.kt
-│   ├── data/
-│   │   └── repository/
-│   │       ├── ARObjectRepositoryImplTest.kt
-│   │       └── ARSceneRepositoryImplTest.kt
+│   ├── infrastructure/
+│   │   └── persistence/
+│   │       ├── repository/
+│   │       │   ├── ARObjectRepositoryImplTest.kt
+│   │       │   └── ARSceneRepositoryImplTest.kt
+│   │       └── mapper/
+│   │           └── ARObjectMapperTest.kt
 │   └── presentation/
 │       └── viewmodel/
 │           ├── ARViewModelTest.kt
@@ -325,12 +332,12 @@ composeApp/src/
 
 ---
 
-## Coverage Hedefi
+## Coverage Targets
 
-- **Domain Layer:** 90%+
-- **Use Cases:** 100%
-- **Repository Interfaces:** 80%+
-- **ViewModels:** 85%+
+- **Domain Layer (Entities & Value Objects):** 90%+
+- **Application Layer (Use Cases):** 100%
+- **Infrastructure Layer (Repositories):** 80%+
+- **Presentation Layer (ViewModels):** 85%+
 
 ---
 

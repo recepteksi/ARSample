@@ -8,11 +8,11 @@ import com.trendhive.arsample.domain.model.ScreenPosition
 import com.trendhive.arsample.domain.model.TrashZoneState
 import com.trendhive.arsample.domain.model.Vector3
 import com.trendhive.arsample.domain.model.currentTimeMillis
-import com.trendhive.arsample.domain.usecase.MoveObjectUseCase
-import com.trendhive.arsample.domain.usecase.PlaceObjectInSceneUseCase
-import com.trendhive.arsample.domain.usecase.RemoveObjectFromSceneUseCase
-import com.trendhive.arsample.domain.usecase.GetSceneUseCase
-import com.trendhive.arsample.domain.usecase.SaveSceneUseCase
+import com.trendhive.arsample.application.usecase.MoveObjectUseCase
+import com.trendhive.arsample.application.usecase.PlaceObjectInSceneUseCase
+import com.trendhive.arsample.application.usecase.RemoveObjectFromSceneUseCase
+import com.trendhive.arsample.application.usecase.GetSceneUseCase
+import com.trendhive.arsample.application.usecase.SaveSceneUseCase
 import com.trendhive.arsample.domain.repository.ARSceneRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

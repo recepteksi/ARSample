@@ -100,24 +100,30 @@ protocol ARSceneRepositoryProtocol {
 
 ### 3. Clean Architecture Verification
 
-**Layer Dependencies:**
+**Layer Dependencies (DDD Structure):**
 ```
-Presentation → Domain ← Data
-                 ↑
-        Platform-Specific (android/ios)
+Presentation → Application → Domain ← Infrastructure
+                              ↑
+                     Platform-Specific (android/ios)
 ```
 
 **Dependency Rule:**
-- Domain layer will NOT depend on any other layer
-- Data layer depends on domain
-- Presentation layer depends on domain
+- Domain layer: Pure business logic, NO dependencies on any other layer
+- Application layer: Orchestrates domain objects, depends on domain only
+- Infrastructure layer: Technical implementations, depends on domain
+- Presentation layer: UI layer, depends on application and domain
 
 **Dependency Injection:**
 ```kotlin
-// No dependencies in domain layer (only interface)
+// Repository interface in domain layer (NO implementation)
 interface ARObjectRepository
 
-// Implementation in data layer
+// Use cases in application layer
+class ImportObjectUseCase(
+    private val repository: ARObjectRepository
+) : ImportObjectUseCaseInterface
+
+// Repository implementation in infrastructure layer
 class ARObjectRepositoryImpl(
     private val localDataSource: ARModelLocalDataSource,
     private val fileStorage: ModelFileStorage
@@ -195,21 +201,23 @@ data class ARObject(val uri: String) {
 
 **UseCase Rules:**
 - Each use case does one thing (SRP)
-- Use cases in domain layer
+- Use cases in **application layer** (NOT domain)
 - Use case names should be verbs
 - Must be typed Input/Output (BaseUseCase<Input, Output>)
 - Must use Interface + Implementation pattern
 - Must return Result<T>
+- Use cases orchestrate domain objects and repositories
 
 ```kotlin
 // CORRECT - Single responsibility, typed input/output
+// Location: application/usecase/
 interface ImportObjectUseCaseInterface : BaseUseCase<ImportObjectInput, ARObject>
 
 class ImportObjectUseCase(
     private val repository: ARObjectRepository
 ) : ImportObjectUseCaseInterface {
     override suspend fun invoke(input: ImportObjectInput): Result<ARObject> {
-        // Validate using Value Objects
+        // Validate using Value Objects (from domain)
         val nameResult = ObjectName.create(input.name)
         if (nameResult.isFailure) return Result.failure(nameResult.exceptionOrNull()!!)
         
@@ -252,7 +260,8 @@ interface ARObjectRepository : BaseRepository {
     suspend fun importObject(uri: String, name: String, modelType: ModelType): Result<ARObject>
 }
 
-// Implementation in data layer (with DTO and Mapper)
+// Implementation in infrastructure layer (with DTO and Mapper)
+// Location: infrastructure/persistence/repository/
 class ARObjectRepositoryImpl(
     private val localDataSource: ARObjectLocalDataSource,
     private val fileStorage: ModelFileStorage,
@@ -273,6 +282,7 @@ class ARObjectRepositoryImpl(
 **Mapper Pattern (DTO ↔ Model):**
 ```kotlin
 // CORRECT - BaseMapper usage
+// Location: infrastructure/persistence/mapper/
 class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
     override fun toDTO(model: ARObject): ARObjectDTO {
         return ARObjectDTO(
@@ -292,6 +302,15 @@ class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
         )
     }
 }
+
+// DTOs in infrastructure/persistence/dto/
+@Serializable
+data class ARObjectDTO(
+    val id: String,
+    val name: String,
+    val modelUri: String,
+    val modelType: String
+)
 
 // WRONG - Manual conversion everywhere
 class ARObjectRepositoryImpl {
