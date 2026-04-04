@@ -46,7 +46,6 @@ private const val HIT_TEST_MIN_CONFIDENCE = 0.5f
 
 // Placement gesture configuration
 private const val TAP_DEBOUNCE_TIME_MS = 300L
-private const val TAP_MAX_DURATION_MS = 200L
 private const val LONG_PRESS_THRESHOLD_MS = 500L
 
 // Scale configuration constants
@@ -68,12 +67,24 @@ fun ARView(
     // This prevents AndroidView factory closure from capturing stale lambda references
     val currentOnModelPlaced by rememberUpdatedState(onModelPlaced)
     val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
-    val currentOnObjectPositionChanged by rememberUpdatedState(onObjectPositionChanged)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
-    
+
+    val coroutineScope = rememberCoroutineScope()
+
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
     val currentNodes = remember { mutableMapOf<String, ModelNode>() }
-    val dragOriginalScales = remember { mutableMapOf<String, Scale>() }
+
+    // Long-press placement state
+    var touchDownTimeMs by remember { mutableStateOf<Long?>(null) }
+    var touchDownPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+    var holdProgress by remember { mutableStateOf(0f) }
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    var isHoldActive by remember { mutableStateOf(false) }
+    var isHoldCancelled by remember { mutableStateOf(false) }
+
+    var selectedNodeId by remember { mutableStateOf<String?>(null) }
+    var currentScale by remember { mutableStateOf(1f) }
+    var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
 
     // Prevent accidental rapid taps from placing multiple objects.
     var lastTapTimeMs by remember { mutableStateOf(0L) }
@@ -83,14 +94,9 @@ fun ARView(
             lastTapTimeMs = currentTimeMs
             true
         } else {
-            Log.d(TAG, "Tap ignored due to debouncing (${delta}ms since last tap)")
             false
         }
     }
-
-    var selectedNodeId by remember { mutableStateOf<String?>(null) }
-    var currentScale by remember { mutableStateOf(1f) }
-    var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
 
     fun normalizeModelLocation(location: String): String {
         return when {
@@ -189,15 +195,6 @@ fun ARView(
         }
     }
 
-    fun cancelHoldFeedback() {
-        holdJob?.cancel()
-        holdJob = null
-        touchDownTimeMs = null
-        touchDownPosition = null
-        holdProgress = 0f
-        isHoldActive = false
-        isHoldCancelled = false
-    }
 
     LaunchedEffect(placedObjects, arSceneView) {
         val view = arSceneView ?: return@LaunchedEffect
@@ -362,7 +359,7 @@ fun ARView(
                         // Always feed scale detector first so pinch-to-zoom works.
                         scaleGestureDetector?.onTouchEvent(e)
 
-                        // If scaling (or multi-touch), cancel any hold feedback and do nothing else.
+                        // If scaling (or multi-touch), cancel hold and do nothing else.
                         if (scaleGestureDetector?.isInProgress == true || e.pointerCount > 1) {
                             if (isHoldActive) {
                                 cancelHoldFeedback()
