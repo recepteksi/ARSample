@@ -12,6 +12,47 @@ type: reference
 
 ---
 
+## 🔄 Git Workflow (IMPORTANT)
+
+**Before starting any task:**
+
+1. **Checkout dev branch:**
+   ```bash
+   git checkout dev
+   git pull origin dev
+   ```
+
+2. **Create feature branch:**
+   ```bash
+   # Format: feature/<task-id> or refactor/<task-id>
+   git checkout -b feature/drag-and-drop
+   ```
+
+3. **Implement changes** on your branch (isolated from dev)
+
+4. **Commit with conventional commits:**
+   ```bash
+   git add .
+   git commit -m "feat(domain): implement drag-and-drop value objects
+   
+   - Add DragState entity
+   - Create PositionValueObject
+   - Update PlacedObject with drag support
+   
+   Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+   ```
+
+5. **Push to remote:**
+   ```bash
+   git push origin feature/drag-and-drop
+   ```
+
+6. **Report completion** to orchestrator for code review
+
+**See:** [WORKFLOW.md](../WORKFLOW.md) for complete workflow documentation.
+
+---
+
 ## Mission
 
 Develop code according to Design & Analysis Agent's design, implement for Android and iOS.

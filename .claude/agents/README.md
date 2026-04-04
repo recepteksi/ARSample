@@ -2,6 +2,21 @@
 
 Central documentation containing 6 agent definitions and task specifications.
 
+## 🔄 Development Workflow
+
+**See:** [../WORKFLOW.md](../WORKFLOW.md) for complete Git branching strategy and agent workflow.
+
+### Quick Workflow Summary
+
+Each agent follows this flow:
+1. **Receives task** from orchestrator (with task ID)
+2. **Creates feature branch** from `dev`: `git checkout -b feature/task-id`
+3. **Implements changes** on isolated branch
+4. **Commits and pushes** with conventional commits
+5. **Requests code review** from Code Reviewer agent
+6. **Merges to dev** if approved
+7. **User merges dev → main** when ready for release
+
 ## Agent List
 
 | # | Agent | Role | Output |

@@ -11,5 +11,9 @@ expect fun PlatformARView(
     onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
     modelPathToLoad: String? = null,
-    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> },
+    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null,
+    onDragStart: ((objectId: String) -> Unit)? = null,
+    onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null
 )

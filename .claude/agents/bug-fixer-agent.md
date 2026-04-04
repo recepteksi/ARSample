@@ -12,6 +12,38 @@ type: reference
 
 ---
 
+## 🔄 Git Workflow (IMPORTANT)
+
+**Before starting any bug fix:**
+
+1. **Checkout dev branch:**
+   ```bash
+   git checkout dev && git pull origin dev
+   ```
+
+2. **Create bugfix branch:**
+   ```bash
+   # Format: bugfix/<task-id>
+   git checkout -b bugfix/bottomsheet-scroll
+   ```
+
+3. **Fix the bug**, commit with fix: prefix:
+   ```bash
+   git commit -m "fix(ui): prevent ModalBottomSheet dismissal on scroll
+   
+   Root cause: Nested scroll events not consumed
+   Solution: Configure rememberModalBottomSheetState
+   
+   Fixes: bottomsheet-scroll-bug
+   Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+   ```
+
+4. **Push and request review** before merging
+
+**See:** [WORKFLOW.md](../WORKFLOW.md) for complete workflow.
+
+---
+
 ## Mission
 
 Detect, analyze, and fix bugs in the application.

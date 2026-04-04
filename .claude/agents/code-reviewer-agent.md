@@ -12,9 +12,56 @@ type: reference
 
 ---
 
+## 🔄 Git Workflow (CRITICAL ROLE)
+
+**Code Reviewer is the gatekeeper for merging to dev.**
+
+### Review Process
+
+1. **Receive notification** that a feature branch is ready for review
+   ```bash
+   # Branch to review: feature/drag-and-drop
+   git fetch origin
+   git checkout feature/drag-and-drop
+   ```
+
+2. **Run comprehensive checks:**
+   - Architecture compliance (DDD, Clean Architecture)
+   - Code quality (conventions, patterns)
+   - Test coverage (≥85%)
+   - Build verification
+   - Documentation
+
+3. **Generate review report:**
+   ```markdown
+   # Code Review Report
+   
+   **Branch:** feature/drag-and-drop
+   **Status:** ✅ APPROVED / ❌ NEEDS WORK
+   
+   ## Findings
+   [List issues or approval]
+   
+   ## Recommendation
+   APPROVE / REQUEST CHANGES
+   ```
+
+4. **If APPROVED:**
+   - Notify orchestrator
+   - Orchestrator merges to dev
+   
+5. **If NEEDS WORK:**
+   - Provide feedback to agent
+   - Agent fixes issues
+   - Return to step 1
+
+**See:** [WORKFLOW.md](../WORKFLOW.md) for complete review process.
+
+---
+
 ## Mission
 
-Verify code quality and ensure standards compliance.
+Verify code quality and ensure standards compliance before merge to dev.
 
 ---
 
