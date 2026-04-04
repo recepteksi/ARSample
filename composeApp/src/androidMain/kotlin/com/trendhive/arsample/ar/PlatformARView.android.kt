@@ -33,7 +33,10 @@ actual fun PlatformARView(
     onModelRemoved: (anchorId: String) -> Unit,
     modelPathToLoad: String?,
     onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit,
-    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)?
+    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)?,
+    onDragStart: ((objectId: String) -> Unit)?,
+    onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -113,7 +116,10 @@ actual fun PlatformARView(
                 onModelRemoved = onModelRemoved,
                 modelPathToLoad = modelPathToLoad,
                 onObjectScaleChanged = onObjectScaleChanged,
-                onObjectPositionChanged = onObjectPositionChanged
+                onObjectPositionChanged = onObjectPositionChanged,
+                onDragStart = onDragStart,
+                onDragMove = onDragMove,
+                onDragEnd = onDragEnd
             )
         }
         else -> {

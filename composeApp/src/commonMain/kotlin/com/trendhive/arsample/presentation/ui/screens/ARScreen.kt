@@ -1,11 +1,20 @@
 package com.trendhive.arsample.presentation.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.trendhive.arsample.ar.PlatformARView
 import com.trendhive.arsample.domain.model.ARObject
@@ -46,6 +55,11 @@ fun ARScreen(
         uiState.selectedObjectId?.let { id -> availableObjects.firstOrNull { it.id == id } }
     }
 
+    // Drag-to-delete UI state
+    var isDragging by remember { mutableStateOf(false) }
+    var isOverTrashZone by remember { mutableStateOf(false) }
+    var draggingObjectId by remember { mutableStateOf<String?>(null) }
+
     val launchPicker = rememberModelFilePicker { uri ->
         val (name, type) = pendingImport ?: return@rememberModelFilePicker
         pendingImport = null
@@ -78,11 +92,16 @@ fun ARScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            val density = LocalDensity.current
+            val trashZoneHeight = 80.dp
+            val trashZoneHeightPx = with(density) { trashZoneHeight.toPx() }
+            val screenHeightPx = with(density) { maxHeight.toPx() }
+
             // Platform-specific AR View
             // CRITICAL FIX: Use currentUiState (rememberUpdatedState) instead of uiState
             // to ensure the lambda always captures the latest state value
@@ -96,7 +115,27 @@ fun ARScreen(
                 },
                 onModelRemoved = onObjectRemoved,
                 modelPathToLoad = selectedObject?.modelUri,
-                onObjectPositionChanged = onObjectPositionChanged
+                onObjectPositionChanged = onObjectPositionChanged,
+                onDragStart = { objectId ->
+                    isDragging = true
+                    draggingObjectId = objectId
+                    isOverTrashZone = false
+                },
+                onDragMove = { objectId, _, screenY ->
+                    if (draggingObjectId != objectId) return@PlatformARView
+                    isOverTrashZone = screenY > (screenHeightPx - trashZoneHeightPx)
+                },
+                onDragEnd = { objectId, _, screenY ->
+                    if (draggingObjectId == objectId) {
+                        val droppedOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
+                        if (droppedOverTrash) {
+                            onObjectRemoved(objectId)
+                        }
+                    }
+                    isDragging = false
+                    draggingObjectId = null
+                    isOverTrashZone = false
+                }
             )
 
             // Loading indicator
@@ -160,6 +199,12 @@ fun ARScreen(
                 }
             }
 
+            TrashZone(
+                isVisible = isDragging,
+                isHovered = isOverTrashZone,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+
         }
 
         // Object selection sheet
@@ -203,6 +248,55 @@ fun ARScreen(
                     showImportDialog = false
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun TrashZone(
+    isVisible: Boolean,
+    isHovered: Boolean,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+    ) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .background(
+                    if (isHovered)
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                    else
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = if (isHovered)
+                        MaterialTheme.colorScheme.onError
+                    else
+                        MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(if (isHovered) 32.dp else 24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isHovered) "Release to Delete" else "Drag here to delete",
+                    color = if (isHovered)
+                        MaterialTheme.colorScheme.onError
+                    else
+                        MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
         }
     }
 }

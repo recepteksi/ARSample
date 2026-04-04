@@ -44,13 +44,19 @@ fun ARView(
     onModelRemoved: (anchorId: String) -> Unit = {},
     modelPathToLoad: String? = null,
     onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> },
-    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null
+    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null,
+    onDragStart: ((objectId: String) -> Unit)? = null,
+    onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
     // This prevents AndroidView factory closure from capturing stale lambda references
     val currentOnModelPlaced by rememberUpdatedState(onModelPlaced)
     val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
     val currentOnObjectPositionChanged by rememberUpdatedState(onObjectPositionChanged)
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDragMove by rememberUpdatedState(onDragMove)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
     
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
@@ -217,13 +223,23 @@ fun ARView(
                             isRotationEditable = false
                             isScaleEditable = false
 
-                            onMoveBegin = { _, _ ->
+                            onMoveBegin = { _, e ->
+                                currentOnDragStart?.invoke(placedObjectId)
+                                currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
+
                                 dragOriginalScales[placedObjectId] = scale
                                 scale = Scale(scale.x * 1.1f, scale.y * 1.1f, scale.z * 1.1f)
                                 true
                             }
 
-                            onMoveEnd = { _, _ ->
+                            onMove = { _, e, _ ->
+                                currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
+                                true
+                            }
+
+                            onMoveEnd = { _, e ->
+                                currentOnDragEnd?.invoke(placedObjectId, e.x, e.y)
+
                                 dragOriginalScales.remove(placedObjectId)?.let { originalScale ->
                                     scale = originalScale
                                 }
