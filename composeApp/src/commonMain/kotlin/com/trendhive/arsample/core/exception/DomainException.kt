@@ -1,4 +1,4 @@
-package com.trendhive.arsample.domain.exception
+package com.trendhive.arsample.core.exception
 
 /**
  * Base sealed class for all domain exceptions.

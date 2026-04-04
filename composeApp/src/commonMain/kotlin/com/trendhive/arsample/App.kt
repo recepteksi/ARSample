@@ -90,7 +90,10 @@ fun App(
                             )
                         },
                         onObjectRemoved = { arViewModel.removeObject(it) },
-                        onObjectDeleted = { objectListViewModel.deleteObject(it) }
+                        onObjectDeleted = { objectListViewModel.deleteObject(it) },
+                        onObjectPositionChanged = { placedObjectId, x, y, z ->
+                            arViewModel.updateObjectPosition(placedObjectId, x, y, z)
+                        }
                     )
                 }
             }

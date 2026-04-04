@@ -12,7 +12,10 @@ actual fun PlatformARView(
     onModelRemoved: (anchorId: String) -> Unit,
     modelPathToLoad: String?,
     onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit,
-    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)?
+    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)?,
+    onDragStart: ((objectId: String) -> Unit)?,
+    onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?
 ) {
     ARViewWrapper(
         modifier = modifier,

@@ -46,6 +46,8 @@ private const val HIT_TEST_MIN_CONFIDENCE = 0.5f
 
 // Placement gesture configuration
 private const val LONG_PRESS_THRESHOLD_MS = 500L
+private const val TAP_DEBOUNCE_TIME_MS = 300L
+private const val TAP_MAX_DURATION_MS = 200L
 
 // Scale configuration constants
 private const val DEFAULT_SCALE = 0.3f
@@ -59,12 +61,20 @@ fun ARView(
     onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
     modelPathToLoad: String? = null,
-    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> },
+    onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null,
+    onDragStart: ((objectId: String) -> Unit)? = null,
+    onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
     // This prevents AndroidView factory closure from capturing stale lambda references
     val currentOnModelPlaced by rememberUpdatedState(onModelPlaced)
     val currentOnObjectScaleChanged by rememberUpdatedState(onObjectScaleChanged)
+    val currentOnObjectPositionChanged by rememberUpdatedState(onObjectPositionChanged)
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDragMove by rememberUpdatedState(onDragMove)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
     
     val coroutineScope = rememberCoroutineScope()
@@ -79,7 +89,9 @@ fun ARView(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var isHoldActive by remember { mutableStateOf(false) }
     var isHoldCancelled by remember { mutableStateOf(false) }
-
+    
+    val dragOriginalScales = remember { mutableMapOf<String, Scale>() }
+    var lastTapTime by remember { mutableStateOf(0L) }
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
@@ -229,12 +241,42 @@ fun ARView(
                     }
 
                     if (modelInstance != null) {
+                        val placedObjectId = obj.objectId
                         val modelNode = ModelNode(modelInstance).apply {
                             position = Position(obj.position.x, obj.position.y, obj.position.z)
                             scale = Scale(obj.scale, obj.scale, obj.scale)
+
+                            // Enable SceneView built-in drag gesture support (long-press + drag)
+                            isPositionEditable = true
+                            isRotationEditable = false
+                            isScaleEditable = false
+
+                            onMoveBegin = { _, e ->
+                                currentOnDragStart?.invoke(placedObjectId)
+                                currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
+
+                                dragOriginalScales[placedObjectId] = scale
+                                scale = Scale(scale.x * 1.1f, scale.y * 1.1f, scale.z * 1.1f)
+                                true
+                            }
+
+                            onMove = { _, e, _ ->
+                                currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
+                                true
+                            }
+
+                            onMoveEnd = { _, e ->
+                                currentOnDragEnd?.invoke(placedObjectId, e.x, e.y)
+
+                                dragOriginalScales.remove(placedObjectId)?.let { originalScale ->
+                                    scale = originalScale
+                                }
+                                val pos = worldPosition
+                                currentOnObjectPositionChanged?.invoke(placedObjectId, pos.x, pos.y, pos.z)
+                            }
                         }
                         view.addChildNode(modelNode)
-                        currentNodes[obj.objectId] = modelNode
+                        currentNodes[placedObjectId] = modelNode
                         Log.d(TAG, "Model loaded: ${obj.arObjectId} with scale ${obj.scale}")
                     } else {
                         Log.e(TAG, "Failed to load model: ${obj.arObjectId}")
