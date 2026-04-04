@@ -45,7 +45,6 @@ private const val HIT_TEST_MAX_DISTANCE = 10.0f
 private const val HIT_TEST_MIN_CONFIDENCE = 0.5f
 
 // Placement gesture configuration
-private const val TAP_DEBOUNCE_TIME_MS = 300L
 private const val LONG_PRESS_THRESHOLD_MS = 500L
 
 // Scale configuration constants
@@ -82,21 +81,19 @@ fun ARView(
     var isHoldActive by remember { mutableStateOf(false) }
     var isHoldCancelled by remember { mutableStateOf(false) }
 
+    fun cancelHoldFeedback() {
+        holdJob?.cancel()
+        holdJob = null
+        touchDownTimeMs = null
+        touchDownPosition = null
+        holdProgress = 0f
+        isHoldActive = false
+        isHoldCancelled = false
+    }
+
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
-
-    // Prevent accidental rapid taps from placing multiple objects.
-    var lastTapTimeMs by remember { mutableStateOf(0L) }
-    fun shouldProcessTap(currentTimeMs: Long): Boolean {
-        val delta = currentTimeMs - lastTapTimeMs
-        return if (delta >= TAP_DEBOUNCE_TIME_MS) {
-            lastTapTimeMs = currentTimeMs
-            true
-        } else {
-            false
-        }
-    }
 
     fun normalizeModelLocation(location: String): String {
         return when {
