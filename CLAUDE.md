@@ -91,28 +91,89 @@ class StorageException(message: String) : DomainException(message)
 
 ## Project Structure
 
-This project follows **DDD + Clean Architecture + MVVM** pattern.
+This project follows **Eric Evans' DDD + Clean Architecture + MVVM** pattern with strict layer separation.
 
 ```
 composeApp/src/
 ├── commonMain/kotlin/com/trendhive/arsample/
-│   ├── domain/           # Domain Layer
-│   │   ├── base/         # Base interfaces (BaseModel, BaseUseCase, BaseRepository, BaseMapper)
-│   │   ├── exception/    # Domain exceptions (ValidationException, EntityNotFoundException)
-│   │   ├── model/        # Entities (ARObject, ARScene, PlacedObject)
-│   │   │   └── valueobjects/  # Value Objects (ModelUri, ObjectName)
-│   │   ├── repository/   # Repository interfaces
-│   │   └── usecase/      # Use case interfaces
-│   ├── data/             # Data Layer
-│   │   ├── dto/          # Data Transfer Objects (ARObjectDTO, ARSceneDTO)
-│   │   ├── mapper/       # DTO ↔ Model mappers
-│   │   ├── repository/   # Repository implementations
-│   │   └── local/        # Data source interfaces (ARObjectLocalDataSource, ModelFileStorage)
-│   └── presentation/     # Presentation Layer
-│       ├── viewmodel/    # ViewModels with state management
-│       └── ui/           # Screens and components
-├── androidMain/          # Android-specific (ARCore/SceneView + Data implementations)
-└── iosMain/              # iOS-specific (ARKit/RealityKit + Data implementations)
+│   ├── domain/                    # Domain Layer (innermost - NO dependencies)
+│   │   ├── base/                  # BaseModel, BaseRepository
+│   │   ├── exception/             # Domain exceptions (ValidationException, EntityNotFoundException, StorageException)
+│   │   ├── model/                 # Entities (ARObject, ARScene, PlacedObject)
+│   │   │   └── valueobjects/      # Value Objects (ModelUri, ObjectName)
+│   │   └── repository/            # Repository interfaces only
+│   │
+│   ├── application/               # Application Layer (depends on Domain)
+│   │   ├── base/                  # BaseUseCase<Input, Output>
+│   │   ├── dto/                   # Use case Input/Output DTOs (NoInput, ListResult, etc.)
+│   │   └── usecase/               # Business workflows (ImportObjectUseCase, PlaceObjectUseCase)
+│   │
+│   ├── infrastructure/            # Infrastructure Layer (depends on Application + Domain)
+│   │   └── persistence/
+│   │       ├── dto/               # Persistence DTOs (ARObjectDTO, ARSceneDTO)
+│   │       ├── mapper/            # DTO ↔ Model mappers (ARObjectMapper, ARSceneMapper)
+│   │       ├── repository/        # Repository implementations (ARObjectRepositoryImpl)
+│   │       ├── local/             # Data source interfaces (ARObjectLocalDataSource, ModelFileStorage)
+│   │       └── BaseMapper.kt      # Mapper base class
+│   │
+│   └── presentation/              # Presentation Layer (depends on Application)
+│       ├── viewmodel/             # ViewModels with state management
+│       └── ui/                    # Compose screens and components
+│           ├── screens/
+│           └── components/
+│
+├── androidMain/                   # Android-specific (ARCore + DataStore implementations)
+│   ├── ar/                        # ARCore/SceneView
+│   └── infrastructure/persistence/local/  # Android data source implementations
+│
+└── iosMain/                       # iOS-specific (ARKit + UserDefaults implementations)
+    ├── ar/                        # ARKit/RealityKit
+    └── infrastructure/persistence/local/  # iOS data source implementations
+```
+
+### Layer Dependencies (DDD Structure)
+
+```
+Presentation → Application → Domain ← Infrastructure
+                              ↑
+                     Platform-Specific
+                     (android/ios)
+```
+
+**Dependency Rules:**
+- **Domain Layer**: Pure business logic, NO dependencies on any other layer
+- **Application Layer**: Orchestrates domain objects, depends on Domain only
+- **Infrastructure Layer**: Technical implementations, depends on Domain
+- **Presentation Layer**: UI layer, depends on Application and Domain
+
+### Import Path Examples
+
+```kotlin
+// Domain entities
+import com.trendhive.arsample.domain.model.ARObject
+import com.trendhive.arsample.domain.model.valueobjects.ModelUri
+
+// Repository interface (domain)
+import com.trendhive.arsample.domain.repository.ARObjectRepository
+
+// Use case (application layer)
+import com.trendhive.arsample.application.usecase.ImportObjectUseCase
+import com.trendhive.arsample.application.usecase.ImportObjectUseCaseInterface
+import com.trendhive.arsample.application.dto.ImportObjectInput
+import com.trendhive.arsample.application.base.BaseUseCase
+
+// Repository implementation (infrastructure)
+import com.trendhive.arsample.infrastructure.persistence.repository.ARObjectRepositoryImpl
+
+// Mapper (infrastructure)
+import com.trendhive.arsample.infrastructure.persistence.mapper.ARObjectMapper
+import com.trendhive.arsample.infrastructure.persistence.BaseMapper
+
+// Persistence DTO (infrastructure)
+import com.trendhive.arsample.infrastructure.persistence.dto.ARObjectDTO
+
+// ViewModel (presentation)
+import com.trendhive.arsample.presentation.viewmodel.ARViewModel
 ```
 
 ## Agent System

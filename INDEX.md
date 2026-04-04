@@ -47,21 +47,55 @@ docs/
 
 ## 🏗️ Architecture Overview
 
-This project follows **DDD + Clean Architecture + MVVM** pattern:
+This project follows **Eric Evans' DDD + Clean Architecture + MVVM** pattern with strict layer separation:
 
 ```
-Domain Layer → Business logic, entities, use cases, repository interfaces
-Data Layer → Repository implementations, DTOs, mappers, data sources
-Presentation Layer → ViewModels, UI screens, state management
+Domain Layer (innermost) → Pure business logic, NO dependencies
+    ↑
+Application Layer → Use cases, depends on Domain only
+    ↑
+Infrastructure Layer → Technical implementations, depends on Domain
+    ↑
+Presentation Layer → UI, depends on Application
 ```
 
 ### Key Patterns
 
-- **Value Objects**: Domain validation (ModelUri, ObjectName)
-- **Base Classes**: BaseModel, BaseUseCase, BaseRepository, BaseMapper
-- **DTO/Mapper**: Separation between domain and data transfer
+- **Value Objects**: Domain validation (ModelUri, ObjectName) in `domain/model/valueobjects/`
+- **Base Classes**: 
+  - `BaseModel`, `BaseRepository` in `domain/base/`
+  - `BaseUseCase` in `application/base/`
+  - `BaseMapper` in `infrastructure/persistence/`
+- **DTO/Mapper**: Separation between domain and persistence
+  - Persistence DTOs in `infrastructure/persistence/dto/`
+  - Mappers in `infrastructure/persistence/mapper/`
 - **Result<T>**: Functional error handling
 - **Interface Segregation**: Every component has an interface
+
+### Layer Structure
+
+**1. Domain Layer** (`domain/`)
+- `base/` - BaseModel, BaseRepository
+- `model/` - Entities (ARObject, ARScene, PlacedObject)
+  - `valueobjects/` - ModelUri, ObjectName
+- `repository/` - Repository interfaces
+- `exception/` - Domain exceptions
+
+**2. Application Layer** (`application/`)
+- `base/` - BaseUseCase
+- `dto/` - Use case Input/Output DTOs
+- `usecase/` - Business workflows
+
+**3. Infrastructure Layer** (`infrastructure/persistence/`)
+- `dto/` - Persistence DTOs
+- `mapper/` - DTO ↔ Model mappers
+- `repository/` - Repository implementations
+- `local/` - Data source interfaces
+- `BaseMapper.kt` - Mapper base class
+
+**4. Presentation Layer** (`presentation/`)
+- `viewmodel/` - State management
+- `ui/` - Compose screens and components
 
 📚 **[Read more about architecture →](./docs/architecture/TECHNICAL_ANALYSIS.md)**
 

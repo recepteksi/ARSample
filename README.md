@@ -51,7 +51,7 @@ ARSample is a production-ready Augmented Reality application built with **Kotlin
 
 ## 🏛️ Architecture
 
-This project follows **Clean Architecture** principles with three distinct layers:
+This project follows **Eric Evans' Domain-Driven Design (DDD) + Clean Architecture** principles with four distinct layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -59,24 +59,47 @@ This project follows **Clean Architecture** principles with three distinct layer
 │  • ViewModels (State Management)                            │
 │  • Compose UI Screens                                       │
 │  • Platform-specific AR Views (AndroidView/UIViewWrapper)  │
+│  • Depends on: Application Layer                            │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────────────┐
+│                   Application Layer                          │
+│  • Use Cases (ImportObject, PlaceObject, RemoveObject)      │
+│  • Business Workflows                                       │
+│  • Use Case DTOs (Input/Output models)                      │
+│  • Depends on: Domain Layer only                            │
 └─────────────────┬───────────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────────┐
 │                     Domain Layer                             │
 │  • Entities (ARObject, ARScene, PlacedObject)               │
-│  • Use Cases (ImportObject, PlaceObject, RemoveObject)      │
-│  • Repository Interfaces                                    │
 │  • Value Objects (ModelUri, ObjectName)                     │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                      Data Layer                              │
+│  • Repository Interfaces                                    │
+│  • Domain Exceptions                                        │
+│  • NO dependencies (innermost layer)                        │
+└────────────────────────────────┬────────────────────────────┘
+                                 ▲
+┌────────────────────────────────┴────────────────────────────┐
+│                 Infrastructure Layer                         │
 │  • Repository Implementations                                │
-│  • DTOs + Mappers                                           │
+│  • DTOs + Mappers (Persistence)                             │
 │  • Local Data Sources (Platform-specific)                   │
 │  • File Storage (Internal Storage / Documents Directory)    │
+│  • Depends on: Domain Layer                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Layer Dependencies (DDD Structure)
+
+```
+Presentation → Application → Domain ← Infrastructure
+```
+
+**Key Architectural Rules:**
+1. **Domain Layer** (innermost): Pure business logic, zero dependencies
+2. **Application Layer**: Orchestrates domain objects, depends on Domain only
+3. **Infrastructure Layer**: Technical implementations, depends on Domain (not Application)
+4. **Presentation Layer**: UI layer, depends on Application
 
 ### Architectural Decisions
 
@@ -99,23 +122,32 @@ sealed class ModelUri private constructor(val value: String) {
 
 #### 2. **Use Case Pattern**
 ```kotlin
+// Use cases in APPLICATION LAYER (not domain)
+// Location: application/usecase/
 interface ImportObjectUseCaseInterface : BaseUseCase<ImportObjectInput, ARObject>
 
 class ImportObjectUseCase(
     private val repository: ARObjectRepository
 ) : ImportObjectUseCaseInterface {
     override suspend fun invoke(input: ImportObjectInput): Result<ARObject> {
-        // Validation with Value Objects
+        // Validation with Value Objects (from domain)
         val nameResult = ObjectName.create(input.name)
         if (nameResult.isFailure) return Result.failure(nameResult.exceptionOrNull()!!)
         
         return repository.importObject(input.uri, input.name, input.modelType)
     }
 }
+
+// Import paths:
+import com.trendhive.arsample.application.usecase.ImportObjectUseCase
+import com.trendhive.arsample.application.base.BaseUseCase
+import com.trendhive.arsample.application.dto.ImportObjectInput
 ```
 
 #### 3. **DTO + Mapper Pattern**
 ```kotlin
+// Persistence DTO in INFRASTRUCTURE LAYER
+// Location: infrastructure/persistence/dto/
 @Serializable
 data class ARObjectDTO(
     val id: String,
@@ -124,10 +156,17 @@ data class ARObjectDTO(
     val modelType: String
 )
 
+// Mapper in INFRASTRUCTURE LAYER
+// Location: infrastructure/persistence/mapper/
 class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
     override fun toDTO(model: ARObject): ARObjectDTO
     override fun toModel(dto: ARObjectDTO): ARObject
 }
+
+// Import paths:
+import com.trendhive.arsample.infrastructure.persistence.dto.ARObjectDTO
+import com.trendhive.arsample.infrastructure.persistence.mapper.ARObjectMapper
+import com.trendhive.arsample.infrastructure.persistence.BaseMapper
 ```
 
 ---
@@ -219,28 +258,43 @@ class ARObjectMapper : BaseMapper<ARObjectDTO, ARObject> {
 ARSample/
 ├── composeApp/src/
 │   ├── commonMain/kotlin/com/trendhive/arsample/
-│   │   ├── domain/              # Domain Layer (Entities, Use Cases, Repositories)
-│   │   │   ├── model/           # Domain entities (ARObject, ARScene, PlacedObject)
-│   │   │   │   └── valueobjects/ # Value Objects (ModelUri, ObjectName)
-│   │   │   ├── repository/      # Repository interfaces
-│   │   │   └── usecase/         # Business logic use cases
-│   │   ├── data/                # Data Layer (Repository Implementations)
-│   │   │   ├── dto/             # Data Transfer Objects
-│   │   │   ├── mapper/          # DTO ↔ Model mappers
-│   │   │   └── repository/      # Repository implementations
-│   │   └── presentation/        # Presentation Layer (UI + ViewModels)
-│   │       ├── viewmodel/       # State management
-│   │       └── ui/              # Compose screens and components
-│   ├── androidMain/             # Android-specific (ARCore, DataStore)
-│   │   ├── ar/                  # ARCore implementation
-│   │   └── data/local/          # Android storage
-│   ├── iosMain/                 # iOS-specific (ARKit, UserDefaults)
-│   │   ├── ar/                  # ARKit implementation
-│   │   └── data/local/          # iOS storage
-│   └── commonTest/              # Shared unit tests
-├── iosApp/                      # iOS app entry point
-├── docs/                        # Architecture docs and guides
-└── .claude/agents/              # AI agent system documentation
+│   │   ├── domain/                   # Domain Layer (NO dependencies)
+│   │   │   ├── base/                 # BaseModel, BaseRepository
+│   │   │   ├── model/                # Domain entities (ARObject, ARScene, PlacedObject)
+│   │   │   │   └── valueobjects/     # Value Objects (ModelUri, ObjectName)
+│   │   │   ├── repository/           # Repository interfaces
+│   │   │   └── exception/            # Domain exceptions
+│   │   │
+│   │   ├── application/              # Application Layer (depends on Domain)
+│   │   │   ├── base/                 # BaseUseCase<Input, Output>
+│   │   │   ├── dto/                  # Use Case Input/Output DTOs
+│   │   │   └── usecase/              # Business workflows (use cases)
+│   │   │
+│   │   ├── infrastructure/           # Infrastructure Layer (depends on Domain)
+│   │   │   └── persistence/
+│   │   │       ├── dto/              # Persistence DTOs
+│   │   │       ├── mapper/           # DTO ↔ Model mappers
+│   │   │       ├── repository/       # Repository implementations
+│   │   │       ├── local/            # Data source interfaces
+│   │   │       └── BaseMapper.kt     # Mapper base class
+│   │   │
+│   │   └── presentation/             # Presentation Layer (depends on Application)
+│   │       ├── viewmodel/            # State management
+│   │       └── ui/                   # Compose screens and components
+│   │
+│   ├── androidMain/                  # Android-specific (ARCore, DataStore)
+│   │   ├── ar/                       # ARCore implementation
+│   │   └── infrastructure/persistence/local/  # Android data sources
+│   │
+│   ├── iosMain/                      # iOS-specific (ARKit, UserDefaults)
+│   │   ├── ar/                       # ARKit implementation
+│   │   └── infrastructure/persistence/local/  # iOS data sources
+│   │
+│   └── commonTest/                   # Shared unit tests
+│
+├── iosApp/                           # iOS app entry point
+├── docs/                             # Architecture docs and guides
+└── .claude/agents/                   # AI agent system documentation
 ```
 
 ---
@@ -305,14 +359,26 @@ interface ARObjectRepository : BaseRepository {
 
 ### 2. Base Abstractions
 ```kotlin
+// BaseModel and BaseRepository in DOMAIN layer
 interface BaseModel
+interface BaseRepository
+
+// BaseUseCase in APPLICATION layer
 interface BaseUseCase<Input : BaseModel, Output : BaseModel> {
     suspend operator fun invoke(input: Input): Result<Output>
 }
+
+// BaseMapper in INFRASTRUCTURE layer
 interface BaseMapper<DTO, Model> {
     fun toDTO(model: Model): DTO
     fun toModel(dto: DTO): Model
 }
+
+// Import paths:
+import com.trendhive.arsample.domain.base.BaseModel
+import com.trendhive.arsample.domain.base.BaseRepository
+import com.trendhive.arsample.application.base.BaseUseCase
+import com.trendhive.arsample.infrastructure.persistence.BaseMapper
 ```
 
 ### 3. Exception Hierarchy
