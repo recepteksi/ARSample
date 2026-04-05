@@ -81,6 +81,47 @@ class PlacedObjectTest {
         assertEquals(1f, placed.scale) // default scale
         assertEquals(Quaternion.IDENTITY, placed.rotation) // default rotation
     }
+
+    @Test
+    fun `should have createdAt timestamp`() {
+        val before = System.currentTimeMillis()
+        val placed = PlacedObject(
+            objectId = "test",
+            arObjectId = "ar-obj",
+            position = Vector3(0f, 0f, 0f)
+        )
+        val after = System.currentTimeMillis()
+
+        assertTrue(placed.createdAt >= before)
+        assertTrue(placed.createdAt <= after)
+    }
+
+    @Test
+    fun `should accept custom createdAt`() {
+        val customTimestamp = 123456789L
+        val placed = PlacedObject(
+            objectId = "test",
+            arObjectId = "ar-obj",
+            position = Vector3(0f, 0f, 0f),
+            createdAt = customTimestamp
+        )
+
+        assertEquals(customTimestamp, placed.createdAt)
+    }
+
+    @Test
+    fun `should sort by createdAt descending for newest first ordering`() {
+        val oldest = PlacedObject("1", "ar1", Vector3.ZERO, createdAt = 1000L)
+        val middle = PlacedObject("2", "ar2", Vector3.ZERO, createdAt = 2000L)
+        val newest = PlacedObject("3", "ar3", Vector3.ZERO, createdAt = 3000L)
+
+        val unsorted = listOf(oldest, newest, middle)
+        val sorted = unsorted.sortedByDescending { it.createdAt }
+
+        assertEquals("3", sorted[0].objectId) // newest first
+        assertEquals("2", sorted[1].objectId)
+        assertEquals("1", sorted[2].objectId) // oldest last
+    }
 }
 
 class Vector3Test {
