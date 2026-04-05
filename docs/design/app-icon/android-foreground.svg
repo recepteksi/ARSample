@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="432" height="432" viewBox="0 0 432 432" xmlns="http://www.w3.org/2000/svg">
+  <!-- Android Adaptive Icon - Foreground Layer -->
+  <!-- Safe zone: 108dp x 108dp centered, content within 72dp diameter circle -->
+  
+  <defs>
+    <!-- Cube gradient -->
+    <linearGradient id="cubeGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:0.9" />
+    </linearGradient>
+    
+    <linearGradient id="cubeGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c7d2fe;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#a5b4fc;stop-opacity:0.85" />
+    </linearGradient>
+    
+    <linearGradient id="cubeGradient3" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:0.85" />
+      <stop offset="100%" style="stop-color:#a5b4fc;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <!-- Shadow -->
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="3" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- AR Corner Markers -->
+  <g stroke="#ffffff" stroke-width="8" fill="none" opacity="0.9">
+    <!-- Top-left corner -->
+    <path d="M 100 80 L 80 80 L 80 100"/>
+    
+    <!-- Top-right corner -->
+    <path d="M 352 80 L 352 80 L 352 100"/>
+    <path d="M 332 80 L 352 80"/>
+    
+    <!-- Bottom-left corner -->
+    <path d="M 100 352 L 80 352 L 80 332"/>
+    
+    <!-- Bottom-right corner -->
+    <path d="M 332 352 L 352 352 L 352 332"/>
+  </g>
+  
+  <!-- 3D Cube (Isometric) - Centered in safe zone -->
+  <g transform="translate(216, 200)" filter="url(#shadow)">
+    <!-- Top face -->
+    <path d="M 0,-60 L 70,0 L 0,60 L -70,0 Z" fill="url(#cubeGradient1)"/>
+    
+    <!-- Left face -->
+    <path d="M -70,0 L 0,60 L 0,130 L -70,70 Z" fill="url(#cubeGradient2)"/>
+    
+    <!-- Right face -->
+    <path d="M 0,60 L 70,0 L 70,70 L 0,130 Z" fill="url(#cubeGradient3)"/>
+    
+    <!-- Edge highlights -->
+    <path d="M 0,-60 L 70,0 L 0,60 L -70,0 Z" 
+          fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"/>
+    <path d="M 0,60 L 0,130" 
+          stroke="#4338ca" stroke-width="2" opacity="0.6"/>
+  </g>
+  
+  <!-- AR Grid Dots (Subtle) -->
+  <g fill="#ffffff" opacity="0.2">
+    <circle cx="130" cy="120" r="4"/>
+    <circle cx="170" cy="140" r="4"/>
+    <circle cx="262" cy="140" r="4"/>
+    <circle cx="302" cy="120" r="4"/>
+    <circle cx="130" cy="312" r="4"/>
+    <circle cx="170" cy="292" r="4"/>
+    <circle cx="262" cy="292" r="4"/>
+    <circle cx="302" cy="312" r="4"/>
+  </g>
+</svg>

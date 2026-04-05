@@ -31,6 +31,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.datastore.preferences)
+            implementation(libs.androidx.core.splashscreen)
             implementation(libs.sceneview)
             implementation(libs.arcore)
             implementation(libs.gson)
