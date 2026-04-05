@@ -216,47 +216,115 @@ fun ARView(
     }
 
     /**
+     * Projects a 3D world position to 2D screen coordinates using ARCore camera.
+     * Returns null if the point is behind the camera or projection fails.
+     */
+    fun worldToScreen(view: ARSceneView, frame: Frame, worldX: Float, worldY: Float, worldZ: Float): Pair<Float, Float>? {
+        return try {
+            val camera = frame.camera
+            if (camera.trackingState != TrackingState.TRACKING) {
+                return null
+            }
+            
+            val viewWidth = view.width.toFloat()
+            val viewHeight = view.height.toFloat()
+            if (viewWidth <= 0 || viewHeight <= 0) return null
+            
+            // Get projection and view matrices from ARCore camera
+            val projectionMatrix = FloatArray(16)
+            val viewMatrix = FloatArray(16)
+            camera.getProjectionMatrix(projectionMatrix, 0, 0.1f, 100f)
+            camera.getViewMatrix(viewMatrix, 0)
+            
+            // Combine into view-projection matrix
+            val vpMatrix = FloatArray(16)
+            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+            
+            // Transform world point to clip space
+            val worldPoint = floatArrayOf(worldX, worldY, worldZ, 1f)
+            val clipPoint = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(clipPoint, 0, vpMatrix, 0, worldPoint, 0)
+            
+            // Check if point is behind camera (w <= 0 means behind)
+            if (clipPoint[3] <= 0.001f) {
+                return null
+            }
+            
+            // Perspective divide to get NDC (Normalized Device Coordinates)
+            val ndcX = clipPoint[0] / clipPoint[3]
+            val ndcY = clipPoint[1] / clipPoint[3]
+            
+            // Convert NDC to screen coordinates
+            // NDC is in range [-1, 1], convert to [0, width] and [0, height]
+            val screenX = (ndcX + 1f) * 0.5f * viewWidth
+            val screenY = (1f - ndcY) * 0.5f * viewHeight  // Y is flipped in screen space
+            
+            Pair(screenX, screenY)
+        } catch (e: Exception) {
+            Log.e(TAG, "worldToScreen failed: ${e.message}", e)
+            null
+        }
+    }
+    
+    /**
      * Checks if the given screen coordinates hit any existing ModelNode.
      * Returns the objectId if hit, null otherwise.
      * 
-     * Note: This is a simplified check. SceneView's internal gesture detector
-     * will do the precise hit testing when we return false (don't consume event).
-     * We just need to differentiate "probably hitting node" vs "definitely empty space".
+     * Uses screen-space distance checking which works correctly for the entire
+     * model, not just the base. This fixes the issue where touching the top
+     * of tall models didn't trigger drag.
      */
     fun hitTestNode(view: ARSceneView, x: Float, y: Float): String? {
-        // SceneView doesn't expose a simple node hit test API
-        // Strategy: Try ARCore's hit test and see if it hits near any of our nodes
         return try {
             val frame = getARFrameSafely(view) ?: return null
-            val hits = frame.hitTest(x, y)
             
-            if (hits.isEmpty()) {
-                return null  // No AR hits at all - definitely empty space
-            }
+            // Screen-space hit detection: project each node to screen and check 2D distance
+            // This works regardless of where on the model the user touches
+            var closestObjectId: String? = null
+            var closestDistanceSq = Float.MAX_VALUE
             
-            // Check if any hit is close to one of our nodes
-            for (hit in hits) {
-                val hitPose = hit.hitPose
-                val hitX = hitPose.tx()
-                val hitY = hitPose.ty()
-                val hitZ = hitPose.tz()
+            // Hit radius in screen pixels - generous to account for model size
+            val hitRadiusPx = 150f
+            val hitRadiusSq = hitRadiusPx * hitRadiusPx
+            
+            for ((objectId, node) in currentNodes) {
+                val nodePos = node.worldPosition
                 
-                // Check distance to each node
-                for ((objectId, node) in currentNodes) {
-                    val nodePos = node.position
-                    val dx = hitX - nodePos.x
-                    val dy = hitY - nodePos.y
-                    val dz = hitZ - nodePos.z
-                    val distanceSq = dx * dx + dy * dy + dz * dz
+                // Project node's base position to screen
+                val screenPos = worldToScreen(view, frame, nodePos.x, nodePos.y, nodePos.z)
+                if (screenPos != null) {
+                    val dx = x - screenPos.first
+                    val dy = y - screenPos.second
+                    val distanceSq = dx * dx + dy * dy
                     
-                    // If within 0.3m of a node, consider it a hit on that node
-                    if (distanceSq < 0.3f * 0.3f) {
-                        return objectId
+                    // Check if within hit radius and closer than previous candidates
+                    if (distanceSq < hitRadiusSq && distanceSq < closestDistanceSq) {
+                        closestDistanceSq = distanceSq
+                        closestObjectId = objectId
+                    }
+                }
+                
+                // Also check a point above the base (approximating model center/top)
+                // Assume average model height of ~0.3m for the scaled models
+                val modelHeight = 0.3f * node.scale.y
+                val topScreenPos = worldToScreen(view, frame, nodePos.x, nodePos.y + modelHeight, nodePos.z)
+                if (topScreenPos != null) {
+                    val dx = x - topScreenPos.first
+                    val dy = y - topScreenPos.second
+                    val distanceSq = dx * dx + dy * dy
+                    
+                    if (distanceSq < hitRadiusSq && distanceSq < closestDistanceSq) {
+                        closestDistanceSq = distanceSq
+                        closestObjectId = objectId
                     }
                 }
             }
             
-            null  // Hit AR planes but not near any nodes
+            if (closestObjectId != null) {
+                Log.d(TAG, "Screen-space hit detected on object $closestObjectId (distSq=${closestDistanceSq})")
+            }
+            
+            closestObjectId
         } catch (e: Exception) {
             Log.e(TAG, "Node hit test failed: ${e.message}", e)
             null
