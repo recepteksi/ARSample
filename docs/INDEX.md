@@ -14,6 +14,18 @@
 
 ## 📂 Documentation Structure
 
+### 🎨 UI/UX Design
+Complete design system and guidelines for ARSample application.
+
+| File | Description |
+|------|-------------|
+| [design/README.md](./design/README.md) | **📚 START HERE** - Design documentation overview |
+| [design/UI_UX_DESIGN_GUIDE.md](./design/UI_UX_DESIGN_GUIDE.md) | **📖 Complete Guide** - Material 3 + iOS HIG design system (1000+ lines) |
+| [design/AR_COMPETITOR_ANALYSIS.md](./design/AR_COMPETITOR_ANALYSIS.md) | **🔍 Research** - Industry analysis (IKEA, Amazon, Houzz, Pokemon GO) |
+| [design/DESIGN_TOKENS.md](./design/DESIGN_TOKENS.md) | **⚡ Quick Ref** - Colors, typography, spacing, icons |
+
+---
+
 ### 🏗️ Architecture
 Documentation about system design and architecture.
 

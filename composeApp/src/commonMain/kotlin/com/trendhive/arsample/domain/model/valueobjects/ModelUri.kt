@@ -20,6 +20,10 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
         /**
          * Factory method to create a ModelUri with validation.
          * 
+         * Accepts both file paths and content:// URIs:
+         * - File paths: Validated by extension (e.g., /path/to/model.glb)
+         * - Content URIs: Accepted as-is (e.g., content://com.android.providers.downloads.documents/...)
+         * 
          * @param uri The file URI to validate
          * @return Result.success with ValidModelUri if valid, Result.failure with ValidationException otherwise
          */
@@ -27,6 +31,10 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
             return when {
                 uri.isBlank() -> 
                     Result.failure(ValidationException("Model URI cannot be blank"))
+                isContentUri(uri) -> 
+                    // Content URIs don't have file extensions in the URI string
+                    // Actual file type will be validated when reading the file
+                    Result.success(ValidModelUri(uri))
                 !hasValidExtension(uri) -> 
                     Result.failure(ValidationException(
                         "Invalid model format. Supported: ${VALID_EXTENSIONS.joinToString { ".$it" }}"
@@ -34,6 +42,10 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
                 else -> 
                     Result.success(ValidModelUri(uri))
             }
+        }
+        
+        private fun isContentUri(uri: String): Boolean {
+            return uri.startsWith("content://") || uri.startsWith("file://")
         }
         
         private fun hasValidExtension(uri: String): Boolean {

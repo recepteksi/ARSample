@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARSample App Icon Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .icon-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .icon-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .icon-wrapper {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .icon-wrapper img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .icon-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .icon-size {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* Platform Badges */
+        .platform-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 5px 5px 0 0;
+        }
+
+        .badge-ios {
+            background: #000;
+            color: white;
+        }
+
+        .badge-android {
+            background: #3ddc84;
+            color: #000;
+        }
+
+        /* Master Preview */
+        .master-preview {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+
+        .master-preview img {
+            max-width: 400px;
+            width: 100%;
+            border-radius: 90px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        /* Color Palette */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .color-item {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .color-code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Adaptive Icon Shapes */
+        .shape-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .shape-item {
+            text-align: center;
+        }
+
+        .shape-preview {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shape-preview img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+        }
+
+        .shape-circle {
+            border-radius: 50%;
+        }
+
+        .shape-rounded-square {
+            border-radius: 33px;
+        }
+
+        .shape-squircle {
+            border-radius: 40px;
+        }
+
+        .shape-teardrop {
+            border-radius: 50% 50% 50% 0;
+        }
+
+        @media (max-width: 768px) {
+            .icon-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .shape-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 ARSample App Icon Preview</h1>
+        <p class="subtitle">Modern AR Application Icon Design - iOS & Android</p>
+
+        <!-- Master Design -->
+        <div class="section master-preview">
+            <img src="icon-master.svg" alt="ARSample App Icon">
+        </div>
+
+        <!-- Design Details -->
+        <div class="section">
+            <h2>📐 Design Specifications</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <strong style="color: #667eea;">Theme:</strong><br>
+                    AR-powered 3D object placement
+                </div>
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <strong style="color: #667eea;">Primary Element:</strong><br>
+                    Isometric 3D cube (represents GLB models)
+                </div>
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <strong style="color: #667eea;">AR Indicators:</strong><br>
+                    Corner scan markers + grid dots
+                </div>
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <strong style="color: #667eea;">Color Scheme:</strong><br>
+                    Purple-indigo gradient + white cube
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Palette -->
+        <div class="section">
+            <h2>🎨 Color Palette</h2>
+            <div class="color-grid">
+                <div class="color-item" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <strong>Background Gradient</strong>
+                    <div class="color-code">#667eea → #764ba2</div>
+                </div>
+                <div class="color-item" style="background: #ffffff; color: #333; border: 2px solid #ddd;">
+                    <strong>Cube Top</strong>
+                    <div class="color-code">#ffffff → #e0e7ff</div>
+                </div>
+                <div class="color-item" style="background: linear-gradient(135deg, #c7d2fe, #a5b4fc);">
+                    <strong>Cube Left</strong>
+                    <div class="color-code">#c7d2fe → #a5b4fc</div>
+                </div>
+                <div class="color-item" style="background: linear-gradient(135deg, #818cf8, #a5b4fc);">
+                    <strong>Cube Right</strong>
+                    <div class="color-code">#818cf8 → #a5b4fc</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Android Adaptive Shapes -->
+        <div class="section">
+            <h2>🤖 Android Adaptive Icon Shapes</h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Android applies different masks based on device manufacturer. The icon adapts to Circle, Rounded Square, Squircle, and Teardrop shapes.
+            </p>
+            <div class="shape-grid">
+                <div class="shape-item">
+                    <div class="shape-preview shape-circle">
+                        <img src="android-foreground.svg" alt="Circle">
+                    </div>
+                    <strong>Circle</strong><br>
+                    <span style="font-size: 0.9rem; color: #666;">Google Pixel</span>
+                </div>
+                <div class="shape-item">
+                    <div class="shape-preview shape-rounded-square">
+                        <img src="android-foreground.svg" alt="Rounded Square">
+                    </div>
+                    <strong>Rounded Square</strong><br>
+                    <span style="font-size: 0.9rem; color: #666;">Samsung</span>
+                </div>
+                <div class="shape-item">
+                    <div class="shape-preview shape-squircle">
+                        <img src="android-foreground.svg" alt="Squircle">
+                    </div>
+                    <strong>Squircle</strong><br>
+                    <span style="font-size: 0.9rem; color: #666;">OnePlus</span>
+                </div>
+                <div class="shape-item">
+                    <div class="shape-preview shape-teardrop">
+                        <img src="android-foreground.svg" alt="Teardrop">
+                    </div>
+                    <strong>Teardrop</strong><br>
+                    <span style="font-size: 0.9rem; color: #666;">Some OEMs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- iOS Sizes -->
+        <div class="section">
+            <h2>📱 iOS Icon Sizes</h2>
+            <span class="platform-badge badge-ios">iOS 13+</span>
+            <div class="icon-grid">
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="180" alt="iPhone 3x">
+                    </div>
+                    <div class="icon-label">Home Screen (3x)</div>
+                    <div class="icon-size">180x180 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">iPhone 14 Pro, 13 Pro Max</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="120" alt="iPhone 2x">
+                    </div>
+                    <div class="icon-label">Home Screen (2x)</div>
+                    <div class="icon-size">120x120 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">iPhone SE, 13 mini</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="87" alt="Settings 3x">
+                    </div>
+                    <div class="icon-label">Settings (3x)</div>
+                    <div class="icon-size">87x87 px</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="60" alt="Spotlight">
+                    </div>
+                    <div class="icon-label">Spotlight</div>
+                    <div class="icon-size">60x60 px</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="40" alt="Notifications">
+                    </div>
+                    <div class="icon-label">Notifications</div>
+                    <div class="icon-size">40x40 px</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="20" alt="Smallest">
+                    </div>
+                    <div class="icon-label">Smallest (1x)</div>
+                    <div class="icon-size">20x20 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Still recognizable!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Android Sizes -->
+        <div class="section">
+            <h2>🤖 Android Icon Sizes</h2>
+            <span class="platform-badge badge-android">Android 8.0+</span>
+            <div class="icon-grid">
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="192" alt="xxxhdpi">
+                    </div>
+                    <div class="icon-label">xxxhdpi</div>
+                    <div class="icon-size">192x192 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Pixel 7 Pro, S23 Ultra</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="144" alt="xxhdpi">
+                    </div>
+                    <div class="icon-label">xxhdpi</div>
+                    <div class="icon-size">144x144 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Pixel 6, OnePlus 10</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="96" alt="xhdpi">
+                    </div>
+                    <div class="icon-label">xhdpi</div>
+                    <div class="icon-size">96x96 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Mid-range devices</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="72" alt="hdpi">
+                    </div>
+                    <div class="icon-label">hdpi</div>
+                    <div class="icon-size">72x72 px</div>
+                </div>
+                <div class="icon-item">
+                    <div class="icon-wrapper">
+                        <img src="icon-master.svg" width="48" alt="mdpi">
+                    </div>
+                    <div class="icon-label">mdpi</div>
+                    <div class="icon-size">48x48 px</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Baseline density</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Guide -->
+        <div class="section">
+            <h2>🚀 Quick Start Guide</h2>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Step 1: Export Icons</h3>
+                <pre style="background: #2d3748; color: #68d391; padding: 15px; border-radius: 8px; overflow-x: auto;">cd docs/design/app-icon
+./export-script.sh</pre>
+
+                <h3 style="color: #667eea; margin: 20px 0 15px;">Step 2: Copy to Projects</h3>
+                <pre style="background: #2d3748; color: #68d391; padding: 15px; border-radius: 8px; overflow-x: auto;"># iOS
+./copy-ios-icons.sh
+
+# Android (manual - see android-adaptive-guide.md)
+# Copy foreground/background layers to res/mipmap-* folders</pre>
+
+                <h3 style="color: #667eea; margin: 20px 0 15px;">Step 3: Integrate with main-developer-agent</h3>
+                <p style="color: #666; margin-top: 10px;">
+                    Run the main-developer-agent to automatically integrate icons into both platforms.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; color: rgba(255,255,255,0.8); margin-top: 40px; padding: 20px;">
+            <p style="font-size: 0.9rem;">
+                <strong>ARSample App Icon Design</strong><br>
+                Version 1.0 • 2026-03-30 • Design Analysis Agent<br>
+                <span style="font-size: 0.8rem;">Kotlin Multiplatform • ARCore + ARKit</span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -28,6 +28,7 @@ All documentation is organized in the `docs/` folder:
 docs/
 ├── INDEX.md                    # Master documentation index
 ├── architecture/               # Architecture and design docs
+├── design/                     # UI/UX design system and guidelines
 ├── agents/                     # Multi-agent system documentation
 ├── ios/                        # iOS-specific documentation
 ├── guides/                     # How-to guides and checklists
@@ -38,6 +39,7 @@ docs/
 
 - **[Full Documentation Index](./docs/INDEX.md)** - Browse all documentation
 - **[Architecture](./docs/architecture/TECHNICAL_ANALYSIS.md)** - System design
+- **[UI/UX Design](./docs/design/)** - Design system and guidelines
 - **[Agents System](./docs/agents/README.md)** - Development workflow
 - **[iOS Guide](./docs/ios/ios-quick-reference.md)** - iOS implementation
 - **[Testing Guide](./docs/guides/TEST_IMPLEMENTATION_GUIDE.md)** - Testing
@@ -168,6 +170,7 @@ open iosApp/iosApp.xcodeproj  # Then run from Xcode
 ### By Topic
 
 - **🏗️ Architecture**: [Technical Analysis](./docs/architecture/technical-analysis.md)
+- **🎨 Design**: [UI/UX Design System](./docs/design/)
 - **👥 Development**: [Agents System](./docs/agents/README.md)
 - **📱 iOS**: [iOS Documentation](./docs/ios/)
 - **📖 Guides**: [Implementation Guides](./docs/guides/)
@@ -195,6 +198,9 @@ open iosApp/iosApp.xcodeproj  # Then run from Xcode
 
 ## 📝 Recent Updates
 
+- **2026-03-30**: Added comprehensive [UI/UX Design System](./docs/design/) with Material 3 + iOS guidelines
+- **2026-03-30**: Added [AR Competitor Analysis](./docs/design/AR_COMPETITOR_ANALYSIS.md) research
+- **2026-03-30**: Added [Design Tokens](./docs/design/DESIGN_TOKENS.md) quick reference
 - **2026-03-30**: Added [Drag-and-Drop Design Document](./docs/DRAG_DROP_DESIGN.md)
 - **2026-03-31**: Documentation reorganized into `docs/` structure
 - **2026-03-31**: Agents updated with Flutter-inspired DDD patterns
