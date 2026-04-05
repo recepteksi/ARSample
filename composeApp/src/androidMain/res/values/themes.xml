@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme -->
+    <style name="Theme.ARSample" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Customize your theme here -->
+    </style>
+
+    <!-- Splash Screen theme - API 31+ (Android 12+) -->
+    <style name="Theme.ARSample.Starting" parent="Theme.SplashScreen">
+        <!-- Splash screen background color -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        
+        <!-- Splash screen icon (custom 3D cube) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        
+        <!-- Icon background color (circle behind icon) -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        
+        <!-- Animation duration (300ms) -->
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        
+        <!-- Post splash screen theme -->
+        <item name="postSplashScreenTheme">@style/Theme.ARSample</item>
+    </style>
+</resources>
