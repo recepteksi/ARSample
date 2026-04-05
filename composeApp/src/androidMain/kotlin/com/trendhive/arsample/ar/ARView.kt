@@ -203,6 +203,54 @@ fun ARView(
         isHoldCancelled = false
     }
 
+    /**
+     * Checks if the given screen coordinates hit any existing ModelNode.
+     * Returns the objectId if hit, null otherwise.
+     * 
+     * Note: This is a simplified check. SceneView's internal gesture detector
+     * will do the precise hit testing when we return false (don't consume event).
+     * We just need to differentiate "probably hitting node" vs "definitely empty space".
+     */
+    fun hitTestNode(view: ARSceneView, x: Float, y: Float): String? {
+        // SceneView doesn't expose a simple node hit test API
+        // Strategy: Try ARCore's hit test and see if it hits near any of our nodes
+        return try {
+            val frame = getARFrameSafely(view) ?: return null
+            val hits = frame.hitTest(x, y)
+            
+            if (hits.isEmpty()) {
+                return null  // No AR hits at all - definitely empty space
+            }
+            
+            // Check if any hit is close to one of our nodes
+            for (hit in hits) {
+                val hitPose = hit.hitPose
+                val hitX = hitPose.tx()
+                val hitY = hitPose.ty()
+                val hitZ = hitPose.tz()
+                
+                // Check distance to each node
+                for ((objectId, node) in currentNodes) {
+                    val nodePos = node.position
+                    val dx = hitX - nodePos.x
+                    val dy = hitY - nodePos.y
+                    val dz = hitZ - nodePos.z
+                    val distanceSq = dx * dx + dy * dy + dz * dz
+                    
+                    // If within 0.3m of a node, consider it a hit on that node
+                    if (distanceSq < 0.3f * 0.3f) {
+                        return objectId
+                    }
+                }
+            }
+            
+            null  // Hit AR planes but not near any nodes
+        } catch (e: Exception) {
+            Log.e(TAG, "Node hit test failed: ${e.message}", e)
+            null
+        }
+    }
+
     LaunchedEffect(placedObjects, arSceneView) {
         val view = arSceneView ?: return@LaunchedEffect
 
@@ -393,10 +441,8 @@ fun ARView(
                     }
 
                     onTouchEvent = touchEvent@{ e, _ ->
-                        // Always feed scale detector first so pinch-to-zoom works.
                         scaleGestureDetector?.onTouchEvent(e)
 
-                        // If scaling (or multi-touch), cancel any hold feedback and do nothing else.
                         if (scaleGestureDetector?.isInProgress == true || e.pointerCount > 1) {
                             if (isHoldActive) {
                                 cancelHoldFeedback()
@@ -406,6 +452,15 @@ fun ARView(
 
                         when (e.action) {
                             MotionEvent.ACTION_DOWN -> {
+                                val hitObjectId = hitTestNode(this, e.x, e.y)
+                                
+                                if (hitObjectId != null) {
+                                    Log.d(TAG, "Touch on object $hitObjectId - delegating to SceneView")
+                                    cancelHoldFeedback()
+                                    return@touchEvent false  // Don't consume - let SceneView handle
+                                }
+                                
+                                // Touch on empty space - handle placement
                                 isHoldActive = true
                                 isHoldCancelled = false
                                 touchDownTimeMs = System.currentTimeMillis()
@@ -423,13 +478,16 @@ fun ARView(
                                         delay(16)
                                     }
                                 }
-
                                 true
                             }
 
                             MotionEvent.ACTION_MOVE -> {
+                                if (!isHoldActive) {
+                                    return@touchEvent false
+                                }
+                                
                                 val start = touchDownPosition
-                                if (isHoldActive && start != null) {
+                                if (start != null) {
                                     val dx = e.x - start.first
                                     val dy = e.y - start.second
                                     if (hypot(dx, dy) > touchSlopPx) {
@@ -442,6 +500,10 @@ fun ARView(
                             }
 
                             MotionEvent.ACTION_UP -> {
+                                if (!isHoldActive) {
+                                    return@touchEvent false
+                                }
+                                
                                 val downTime = touchDownTimeMs
                                 val start = touchDownPosition
                                 val holdDuration = if (downTime != null) System.currentTimeMillis() - downTime else 0L
@@ -452,18 +514,20 @@ fun ARView(
                                 if (shouldPlace && start != null) {
                                     performHitTestAndPlace(start.first, start.second)
                                 } else {
-                                    Log.d(TAG, "Ignoring tap: holdDuration=${holdDuration}ms (threshold=${LONG_PRESS_THRESHOLD_MS}ms)")
+                                    Log.d(TAG, "Ignoring tap: holdDuration=${holdDuration}ms")
                                 }
-
                                 true
                             }
 
                             MotionEvent.ACTION_CANCEL -> {
-                                cancelHoldFeedback()
-                                true
+                                if (isHoldActive) {
+                                    cancelHoldFeedback()
+                                    return@touchEvent true
+                                }
+                                false
                             }
 
-                            else -> true
+                            else -> false  // Don't consume unknown events
                         }
                     }
 
