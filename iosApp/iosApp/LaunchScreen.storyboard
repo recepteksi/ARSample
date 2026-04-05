@@ -17,21 +17,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <!-- Background Circle for Icon -->
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="icon-bg-circle">
-                                <rect key="frame" x="96.666666666666686" y="326" width="200" height="200"/>
-                                <color key="backgroundColor" name="LaunchIconBackground"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="200" id="bg-width"/>
-                                    <constraint firstAttribute="height" constant="200" id="bg-height"/>
-                                </constraints>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
-                                        <integer key="value" value="100"/>
-                                    </userDefinedRuntimeAttribute>
-                                </userDefinedRuntimeAttributes>
-                            </view>
-                            <!-- App Icon -->
+                            <!-- App Icon (centered, no background circle due to launch screen constraints) -->
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SplashIcon" translatesAutoresizingMaskIntoConstraints="NO" id="splash-icon">
                                 <rect key="frame" x="121.66666666666669" y="351" width="150" height="150"/>
                                 <constraints>
@@ -43,12 +29,9 @@
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <!-- Background Circle Center -->
-                            <constraint firstItem="icon-bg-circle" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="bg-center-x"/>
-                            <constraint firstItem="icon-bg-circle" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="bg-center-y"/>
-                            <!-- Icon Center (on top of background circle) -->
-                            <constraint firstItem="splash-icon" firstAttribute="centerX" secondItem="icon-bg-circle" secondAttribute="centerX" id="icon-center-x"/>
-                            <constraint firstItem="splash-icon" firstAttribute="centerY" secondItem="icon-bg-circle" secondAttribute="centerY" id="icon-center-y"/>
+                            <!-- Icon Center -->
+                            <constraint firstItem="splash-icon" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="icon-center-x"/>
+                            <constraint firstItem="splash-icon" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="icon-center-y"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -61,9 +44,6 @@
         <image name="SplashIcon" width="200" height="200"/>
         <namedColor name="LaunchBackground">
             <color red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </namedColor>
-        <namedColor name="LaunchIconBackground">
-            <color red="0.384" green="0" blue="0.933" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>
