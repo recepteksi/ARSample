@@ -260,7 +260,7 @@ fun ARScreen(
                 onDismissRequest = { showPlacedObjects = false }
             ) {
                 PlacedObjectsList(
-                    placedObjects = uiState.placedObjects,
+                    placedObjects = uiState.placedObjects.sortedByDescending { it.createdAt },
                     onRemove = {
                         onObjectRemoved(it)
                         showPlacedObjects = false
@@ -562,11 +562,6 @@ private fun PlacedObjectListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(Res.string.remove),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

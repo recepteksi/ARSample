@@ -7,5 +7,6 @@ data class PlacedObject(
     val arObjectId: String,
     val position: Vector3,
     val rotation: Quaternion = Quaternion.IDENTITY,
-    val scale: Float = 1f
+    val scale: Float = 1f,
+    val createdAt: Long = currentTimeMillis()
 ) : BaseModel

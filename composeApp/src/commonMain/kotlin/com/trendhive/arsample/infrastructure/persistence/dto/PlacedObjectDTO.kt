@@ -17,5 +17,6 @@ data class PlacedObjectDTO(
     val rotY: Float,
     val rotZ: Float,
     val rotW: Float,
-    val scale: Float
+    val scale: Float,
+    val createdAt: Long = 0L // Default for backward compatibility
 )
