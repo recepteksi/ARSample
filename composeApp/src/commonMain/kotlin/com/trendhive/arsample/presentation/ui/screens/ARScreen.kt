@@ -530,13 +530,14 @@ private fun ObjectListItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ViewInAr,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+            // Thumbnail or icon based on model type
+            ObjectThumbnail(
+                thumbnailUri = arObject.thumbnailUri,
+                modelType = arObject.modelType,
+                isSelected = isSelected,
+                modifier = Modifier.size(48.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = arObject.name,
@@ -556,6 +557,46 @@ private fun ObjectListItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * Displays a thumbnail for a 3D object.
+ * Shows a custom thumbnail image if available, otherwise displays
+ * a model-type specific icon.
+ */
+@Composable
+private fun ObjectThumbnail(
+    thumbnailUri: String?,
+    modelType: com.trendhive.arsample.domain.model.ModelType,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    val iconTint = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    
+    Box(
+        modifier = modifier
+            .background(backgroundColor, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // For now, use placeholder icons based on model type
+        // TODO: When thumbnailUri is available, load actual thumbnail image
+        Icon(
+            imageVector = Icons.Default.ViewInAr,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = iconTint
+        )
     }
 }
 
