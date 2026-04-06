@@ -108,6 +108,8 @@ fun ARView(
     var dragTouchDownTime by remember { mutableStateOf(0L) }
     var dragTouchDownPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var dragStartNodePosition by remember { mutableStateOf<Position?>(null) }
+    var dragLastScreenX by remember { mutableStateOf<Float?>(null) }
+    var dragLastScreenY by remember { mutableStateOf<Float?>(null) }
     
     // Helper function to reset drag state
     fun resetDragState() {
@@ -116,6 +118,8 @@ fun ARView(
         dragStartNodePosition = null
         dragTouchDownPosition = null
         dragTouchDownTime = 0L
+        dragLastScreenX = null
+        dragLastScreenY = null
     }
     
     // Helper function to restore dragged node's original state
@@ -622,6 +626,8 @@ fun ARView(
                                         // Check if should start dragging (either moved enough or held long enough)
                                         if (!isDragging && (distance > DRAG_SLOP_PX || elapsed > DRAG_LONG_PRESS_MS)) {
                                             isDragging = true
+                                            dragLastScreenX = e.x  // Initialize last position for delta calculation
+                                            dragLastScreenY = e.y
                                             Log.d(TAG, "Drag STARTED for object $nodeId (distance=$distance, elapsed=${elapsed}ms)")
                                             
                                             // Visual feedback: scale up
@@ -648,49 +654,61 @@ fun ARView(
                                                             node.position = Position(pose.tx(), pose.ty(), pose.tz())
                                                             Log.d(TAG, "Drag MOVE: updated position to (${pose.tx()}, ${pose.ty()}, ${pose.tz()})")
                                                         } else {
-                                                            // No valid plane hit - use camera ray projection
-                                                            // Keep object at same distance from camera, but move along screen
+                                                            // No valid plane hit - use screen delta movement
+                                                            // Project finger movement to world XZ plane (horizontal)
                                                             val cam = f.camera
                                                             if (cam.trackingState == TrackingState.TRACKING) {
                                                                 val camPose = cam.pose
                                                                 val oldPos = node.position
                                                                 
-                                                                // Calculate distance from camera to object
-                                                                val dx = oldPos.x - camPose.tx()
-                                                                val dy = oldPos.y - camPose.ty()
-                                                                val dz = oldPos.z - camPose.tz()
-                                                                val dist = kotlin.math.sqrt(dx*dx + dy*dy + dz*dz)
+                                                                // Calculate distance from camera to object (for scaling)
+                                                                val objDx = oldPos.x - camPose.tx()
+                                                                val objDz = oldPos.z - camPose.tz()
+                                                                val horizontalDist = kotlin.math.sqrt(objDx*objDx + objDz*objDz)
                                                                 
-                                                                // Get screen-normalized coordinates (-1 to 1)
+                                                                // Get screen delta from last position (not absolute)
+                                                                val startPos = dragTouchDownPosition
+                                                                val lastX = dragLastScreenX ?: startPos?.first ?: e.x
+                                                                val lastY = dragLastScreenY ?: startPos?.second ?: e.y
+                                                                val screenDeltaX = e.x - lastX
+                                                                val screenDeltaY = e.y - lastY
+                                                                
+                                                                // Store current position for next frame
+                                                                dragLastScreenX = e.x
+                                                                dragLastScreenY = e.y
+                                                                
+                                                                // Convert screen pixels to world units
+                                                                // Scale factor: pixels to meters (adjust based on distance)
                                                                 val screenWidth = this.width.toFloat()
-                                                                val screenHeight = this.height.toFloat()
-                                                                val normX = (e.x / screenWidth) * 2 - 1
-                                                                val normY = 1 - (e.y / screenHeight) * 2
+                                                                val pixelToWorld = (horizontalDist * 0.002f).coerceIn(0.001f, 0.01f)
                                                                 
-                                                                // Project to world using camera view matrix
-                                                                val viewMatrix = FloatArray(16)
-                                                                cam.getViewMatrix(viewMatrix, 0)
+                                                                // Get camera's right and forward vectors (horizontal only)
+                                                                val rightVec = camPose.getXAxis()
+                                                                val forwardVec = camPose.getZAxis()
                                                                 
-                                                                // Simple approximation: move in camera's X/Y plane
-                                                                // Get camera's right and up vectors from pose
-                                                                val rightX = camPose.getXAxis()[0]
-                                                                val rightY = camPose.getXAxis()[1]
-                                                                val rightZ = camPose.getXAxis()[2]
+                                                                // Project camera forward to XZ plane (ignore Y component for horizontal movement)
+                                                                val forwardXZ = floatArrayOf(-forwardVec[0], 0f, -forwardVec[2])
+                                                                val forwardLen = kotlin.math.sqrt(forwardXZ[0]*forwardXZ[0] + forwardXZ[2]*forwardXZ[2])
+                                                                if (forwardLen > 0.001f) {
+                                                                    forwardXZ[0] /= forwardLen
+                                                                    forwardXZ[2] /= forwardLen
+                                                                }
                                                                 
-                                                                val upX = camPose.getYAxis()[0]
-                                                                val upY = camPose.getYAxis()[1]
-                                                                val upZ = camPose.getYAxis()[2]
+                                                                // Calculate world movement from screen delta
+                                                                // Screen X -> world right direction
+                                                                // Screen Y -> world forward direction (into screen)
+                                                                val worldDeltaX = rightVec[0] * screenDeltaX * pixelToWorld + 
+                                                                                  forwardXZ[0] * screenDeltaY * pixelToWorld
+                                                                val worldDeltaZ = rightVec[2] * screenDeltaX * pixelToWorld + 
+                                                                                  forwardXZ[2] * screenDeltaY * pixelToWorld
                                                                 
-                                                                // Scale movement based on distance (farther objects need bigger moves)
-                                                                val scale = dist * 0.5f
-                                                                
-                                                                // Calculate new position
-                                                                val newX = camPose.tx() - camPose.getZAxis()[0] * dist + rightX * normX * scale
-                                                                val newY = oldPos.y // Keep Y (height) the same
-                                                                val newZ = camPose.tz() - camPose.getZAxis()[2] * dist + rightZ * normX * scale
+                                                                // Apply delta to current position (keep Y height unchanged)
+                                                                val newX = oldPos.x + worldDeltaX
+                                                                val newY = oldPos.y  // Keep Y (height) the same
+                                                                val newZ = oldPos.z + worldDeltaZ
                                                                 
                                                                 node.position = Position(newX, newY, newZ)
-                                                                Log.d(TAG, "Drag MOVE (raycast): updated position to ($newX, $newY, $newZ)")
+                                                                Log.d(TAG, "Drag MOVE (fallback): delta=(${screenDeltaX}, ${screenDeltaY}) -> world=($newX, $newY, $newZ)")
                                                             }
                                                         }
                                                     }
