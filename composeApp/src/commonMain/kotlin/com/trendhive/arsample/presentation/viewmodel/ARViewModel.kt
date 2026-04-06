@@ -226,7 +226,7 @@ class ARViewModel(
                     moveObject(currentState.objectId, currentState.currentPosition)
                 }
             }
-            else -> { /* No action needed */ }
+            else -> { /* No action needed for other states */ }
         }
         resetDragState()
     }

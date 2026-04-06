@@ -112,17 +112,23 @@ fun ARScreen(
                 .padding(paddingValues)
         ) {
             val density = LocalDensity.current
-            val trashZoneSize = 80.dp
+            // TrashZone dimensions must match the actual component:
+            // modifier = modifier.padding(16.dp).size(width = 100.dp, height = 90.dp)
+            val trashZoneWidth = 100.dp
+            val trashZoneHeight = 90.dp
             val trashZonePadding = 16.dp
-            val trashZoneSizePx = with(density) { trashZoneSize.toPx() }
+            val trashZoneWidthPx = with(density) { trashZoneWidth.toPx() }
+            val trashZoneHeightPx = with(density) { trashZoneHeight.toPx() }
             val trashZonePaddingPx = with(density) { trashZonePadding.toPx() }
             val screenHeightPx = with(density) { maxHeight.toPx() }
             val screenWidthPx = with(density) { maxWidth.toPx() }
             
-            // Trash zone is at bottom-right: check both X and Y coordinates
+            // Trash zone is at bottom-right (Alignment.BottomEnd):
+            // - X starts at: screenWidth - padding - width
+            // - Y starts at: screenHeight - padding - height
             fun isOverTrashZone(screenX: Float, screenY: Float): Boolean {
-                val trashLeft = screenWidthPx - trashZoneSizePx - trashZonePaddingPx
-                val trashTop = screenHeightPx - trashZoneSizePx - trashZonePaddingPx
+                val trashLeft = screenWidthPx - trashZoneWidthPx - trashZonePaddingPx
+                val trashTop = screenHeightPx - trashZoneHeightPx - trashZonePaddingPx
                 return screenX >= trashLeft && screenY >= trashTop
             }
 
