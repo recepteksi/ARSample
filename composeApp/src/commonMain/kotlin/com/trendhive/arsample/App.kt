@@ -93,6 +93,23 @@ fun App(
                         onObjectDeleted = { objectListViewModel.deleteObject(it) },
                         onObjectPositionChanged = { placedObjectId, x, y, z ->
                             arViewModel.updateObjectPosition(placedObjectId, x, y, z)
+                        },
+                        onDragStart = { objectId, touchX, touchY ->
+                            arViewModel.onDragStart(
+                                objectId = objectId,
+                                touchPosition = com.trendhive.arsample.domain.model.ScreenPosition(touchX, touchY)
+                            )
+                        },
+                        onDragUpdate = { newX, newY, newZ, screenX, screenY, isOverTrash ->
+                            arViewModel.onDragUpdate(
+                                newPosition = com.trendhive.arsample.domain.model.Vector3(newX, newY, newZ),
+                                screenPosition = com.trendhive.arsample.domain.model.ScreenPosition(screenX, screenY),
+                                isOverTrashZone = isOverTrash,
+                                trashProgress = if (isOverTrash) 1f else 0f
+                            )
+                        },
+                        onDragEnd = {
+                            arViewModel.onDragEnd()
                         }
                     )
                 }

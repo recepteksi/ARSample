@@ -54,6 +54,11 @@ private const val DEFAULT_SCALE = 0.3f
 private const val MIN_SCALE = 0.1f
 private const val MAX_SCALE = 5.0f
 
+// Drag gesture configuration constants
+private const val DRAG_SLOP_PX = 24f  // Movement threshold in pixels to start drag
+private const val DRAG_LONG_PRESS_MS = 150L  // Time threshold in ms to recognize as potential drag
+private const val DRAG_FEEDBACK_SCALE_MULTIPLIER = 1.1f  // Visual feedback scale during drag
+
 @Composable
 fun ARView(
     modifier: Modifier = Modifier,
@@ -95,6 +100,33 @@ fun ARView(
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
     var currentScale by remember { mutableStateOf(1f) }
     var scaleGestureDetector by remember { mutableStateOf<ScaleGestureDetector?>(null) }
+    
+    // Custom drag state - because SceneView's built-in gesture detection doesn't work reliably
+    // We must manually handle drag by tracking state and updating position via ARCore hit tests
+    var isDragging by remember { mutableStateOf(false) }
+    var draggedNodeId by remember { mutableStateOf<String?>(null) }
+    var dragTouchDownTime by remember { mutableStateOf(0L) }
+    var dragTouchDownPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+    var dragStartNodePosition by remember { mutableStateOf<Position?>(null) }
+    
+    // Helper function to reset drag state
+    fun resetDragState() {
+        isDragging = false
+        draggedNodeId = null
+        dragStartNodePosition = null
+        dragTouchDownPosition = null
+        dragTouchDownTime = 0L
+    }
+    
+    // Helper function to restore dragged node's original state
+    fun restoreDraggedNodeState(nodeId: String) {
+        dragStartNodePosition?.let { startPos ->
+            currentNodes[nodeId]?.position = startPos
+        }
+        dragOriginalScales.remove(nodeId)?.let { originalScale ->
+            currentNodes[nodeId]?.scale = originalScale
+        }
+    }
 
     fun normalizeModelLocation(location: String): String {
         return when {
@@ -203,6 +235,122 @@ fun ARView(
         isHoldCancelled = false
     }
 
+    /**
+     * Projects a 3D world position to 2D screen coordinates using ARCore camera.
+     * Returns null if the point is behind the camera or projection fails.
+     */
+    fun worldToScreen(view: ARSceneView, frame: Frame, worldX: Float, worldY: Float, worldZ: Float): Pair<Float, Float>? {
+        return try {
+            val camera = frame.camera
+            if (camera.trackingState != TrackingState.TRACKING) {
+                return null
+            }
+            
+            val viewWidth = view.width.toFloat()
+            val viewHeight = view.height.toFloat()
+            if (viewWidth <= 0 || viewHeight <= 0) return null
+            
+            // Get projection and view matrices from ARCore camera
+            val projectionMatrix = FloatArray(16)
+            val viewMatrix = FloatArray(16)
+            camera.getProjectionMatrix(projectionMatrix, 0, 0.1f, 100f)
+            camera.getViewMatrix(viewMatrix, 0)
+            
+            // Combine into view-projection matrix
+            val vpMatrix = FloatArray(16)
+            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+            
+            // Transform world point to clip space
+            val worldPoint = floatArrayOf(worldX, worldY, worldZ, 1f)
+            val clipPoint = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(clipPoint, 0, vpMatrix, 0, worldPoint, 0)
+            
+            // Check if point is behind camera (w <= 0 means behind)
+            if (clipPoint[3] <= 0.001f) {
+                return null
+            }
+            
+            // Perspective divide to get NDC (Normalized Device Coordinates)
+            val ndcX = clipPoint[0] / clipPoint[3]
+            val ndcY = clipPoint[1] / clipPoint[3]
+            
+            // Convert NDC to screen coordinates
+            // NDC is in range [-1, 1], convert to [0, width] and [0, height]
+            val screenX = (ndcX + 1f) * 0.5f * viewWidth
+            val screenY = (1f - ndcY) * 0.5f * viewHeight  // Y is flipped in screen space
+            
+            Pair(screenX, screenY)
+        } catch (e: Exception) {
+            Log.e(TAG, "worldToScreen failed: ${e.message}", e)
+            null
+        }
+    }
+    
+    /**
+     * Checks if the given screen coordinates hit any existing ModelNode.
+     * Returns the objectId if hit, null otherwise.
+     * 
+     * Uses screen-space distance checking which works correctly for the entire
+     * model, not just the base. This fixes the issue where touching the top
+     * of tall models didn't trigger drag.
+     */
+    fun hitTestNode(view: ARSceneView, x: Float, y: Float): String? {
+        return try {
+            val frame = getARFrameSafely(view) ?: return null
+            
+            // Screen-space hit detection: project each node to screen and check 2D distance
+            // This works regardless of where on the model the user touches
+            var closestObjectId: String? = null
+            var closestDistanceSq = Float.MAX_VALUE
+            
+            // Hit radius in screen pixels - generous to account for model size
+            val hitRadiusPx = 150f
+            val hitRadiusSq = hitRadiusPx * hitRadiusPx
+            
+            for ((objectId, node) in currentNodes) {
+                val nodePos = node.worldPosition
+                
+                // Project node's base position to screen
+                val screenPos = worldToScreen(view, frame, nodePos.x, nodePos.y, nodePos.z)
+                if (screenPos != null) {
+                    val dx = x - screenPos.first
+                    val dy = y - screenPos.second
+                    val distanceSq = dx * dx + dy * dy
+                    
+                    // Check if within hit radius and closer than previous candidates
+                    if (distanceSq < hitRadiusSq && distanceSq < closestDistanceSq) {
+                        closestDistanceSq = distanceSq
+                        closestObjectId = objectId
+                    }
+                }
+                
+                // Also check a point above the base (approximating model center/top)
+                // Assume average model height of ~0.3m for the scaled models
+                val modelHeight = 0.3f * node.scale.y
+                val topScreenPos = worldToScreen(view, frame, nodePos.x, nodePos.y + modelHeight, nodePos.z)
+                if (topScreenPos != null) {
+                    val dx = x - topScreenPos.first
+                    val dy = y - topScreenPos.second
+                    val distanceSq = dx * dx + dy * dy
+                    
+                    if (distanceSq < hitRadiusSq && distanceSq < closestDistanceSq) {
+                        closestDistanceSq = distanceSq
+                        closestObjectId = objectId
+                    }
+                }
+            }
+            
+            if (closestObjectId != null) {
+                Log.d(TAG, "Screen-space hit detected on object $closestObjectId (distSq=${closestDistanceSq})")
+            }
+            
+            closestObjectId
+        } catch (e: Exception) {
+            Log.e(TAG, "Node hit test failed: ${e.message}", e)
+            null
+        }
+    }
+
     LaunchedEffect(placedObjects, arSceneView) {
         val view = arSceneView ?: return@LaunchedEffect
 
@@ -246,17 +394,22 @@ fun ARView(
                             position = Position(obj.position.x, obj.position.y, obj.position.z)
                             scale = Scale(obj.scale, obj.scale, obj.scale)
 
-                            // Enable SceneView built-in drag gesture support (long-press + drag)
+                            // Note: We use custom drag handling in onTouchEvent instead of
+                            // SceneView's built-in gestures which don't work reliably.
+                            // Keep these flags enabled as they may help with node selection.
                             isPositionEditable = true
                             isRotationEditable = false
                             isScaleEditable = false
 
+                            // Fallback callbacks - may not fire with our custom touch handling
+                            // but kept for potential edge cases
                             onMoveBegin = { _, e ->
+                                Log.d(TAG, "SceneView onMoveBegin for $placedObjectId (fallback)")
                                 currentOnDragStart?.invoke(placedObjectId)
                                 currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
 
                                 dragOriginalScales[placedObjectId] = scale
-                                scale = Scale(scale.x * 1.1f, scale.y * 1.1f, scale.z * 1.1f)
+                                scale = Scale(scale.x * DRAG_FEEDBACK_SCALE_MULTIPLIER, scale.y * DRAG_FEEDBACK_SCALE_MULTIPLIER, scale.z * DRAG_FEEDBACK_SCALE_MULTIPLIER)
                                 true
                             }
 
@@ -266,6 +419,7 @@ fun ARView(
                             }
 
                             onMoveEnd = { _, e ->
+                                Log.d(TAG, "SceneView onMoveEnd for $placedObjectId (fallback)")
                                 currentOnDragEnd?.invoke(placedObjectId, e.x, e.y)
 
                                 dragOriginalScales.remove(placedObjectId)?.let { originalScale ->
@@ -393,19 +547,47 @@ fun ARView(
                     }
 
                     onTouchEvent = touchEvent@{ e, _ ->
-                        // Always feed scale detector first so pinch-to-zoom works.
                         scaleGestureDetector?.onTouchEvent(e)
 
-                        // If scaling (or multi-touch), cancel any hold feedback and do nothing else.
                         if (scaleGestureDetector?.isInProgress == true || e.pointerCount > 1) {
                             if (isHoldActive) {
                                 cancelHoldFeedback()
+                            }
+                            // Cancel any ongoing drag if multi-touch detected
+                            if (isDragging) {
+                                Log.d(TAG, "Drag cancelled due to multi-touch")
+                                // Restore original position
+                                draggedNodeId?.let { nodeId ->
+                                    restoreDraggedNodeState(nodeId)
+                                }
+                                resetDragState()
                             }
                             return@touchEvent true
                         }
 
                         when (e.action) {
                             MotionEvent.ACTION_DOWN -> {
+                                val hitObjectId = hitTestNode(this, e.x, e.y)
+                                
+                                if (hitObjectId != null) {
+                                    // Touch on existing object - start potential drag
+                                    Log.d(TAG, "Touch DOWN on object $hitObjectId - starting drag detection")
+                                    cancelHoldFeedback()
+                                    
+                                    dragTouchDownTime = System.currentTimeMillis()
+                                    dragTouchDownPosition = e.x to e.y
+                                    draggedNodeId = hitObjectId
+                                    isDragging = false  // Not dragging yet, just tracking
+                                    
+                                    // Store node's starting position for potential drag
+                                    currentNodes[hitObjectId]?.let { node ->
+                                        dragStartNodePosition = node.position
+                                    }
+                                    
+                                    return@touchEvent true  // CONSUME - we're handling this
+                                }
+                                
+                                // Touch on empty space - handle placement
                                 isHoldActive = true
                                 isHoldCancelled = false
                                 touchDownTimeMs = System.currentTimeMillis()
@@ -423,13 +605,71 @@ fun ARView(
                                         delay(16)
                                     }
                                 }
-
                                 true
                             }
 
                             MotionEvent.ACTION_MOVE -> {
+                                // Check if we're tracking a node touch (potential or active drag)
+                                val nodeId = draggedNodeId
+                                if (nodeId != null) {
+                                    val startPos = dragTouchDownPosition
+                                    if (startPos != null) {
+                                        val dx = e.x - startPos.first
+                                        val dy = e.y - startPos.second
+                                        val distance = hypot(dx, dy)
+                                        val elapsed = System.currentTimeMillis() - dragTouchDownTime
+                                        
+                                        // Check if should start dragging (either moved enough or held long enough)
+                                        if (!isDragging && (distance > DRAG_SLOP_PX || elapsed > DRAG_LONG_PRESS_MS)) {
+                                            isDragging = true
+                                            Log.d(TAG, "Drag STARTED for object $nodeId (distance=$distance, elapsed=${elapsed}ms)")
+                                            
+                                            // Visual feedback: scale up
+                                            currentNodes[nodeId]?.let { node ->
+                                                dragOriginalScales[nodeId] = node.scale
+                                                node.scale = Scale(node.scale.x * DRAG_FEEDBACK_SCALE_MULTIPLIER, node.scale.y * DRAG_FEEDBACK_SCALE_MULTIPLIER, node.scale.z * DRAG_FEEDBACK_SCALE_MULTIPLIER)
+                                            }
+                                            
+                                            currentOnDragStart?.invoke(nodeId)
+                                        }
+                                        
+                                        // If dragging, update node position
+                                        if (isDragging) {
+                                            val frame = getARFrameSafely(this)
+                                            frame?.let { f ->
+                                                try {
+                                                    val hitResults = f.hitTest(e.x, e.y)
+                                                    val validHits = filterHitResults(hitResults)
+                                                    
+                                                    if (validHits.isNotEmpty()) {
+                                                        val bestHit = validHits.first()
+                                                        val pose = bestHit.hitPose
+                                                        
+                                                        // Update node position directly
+                                                        currentNodes[nodeId]?.let { node ->
+                                                            node.position = Position(pose.tx(), pose.ty(), pose.tz())
+                                                        }
+                                                        
+                                                        Log.d(TAG, "Drag MOVE: updated position to (${pose.tx()}, ${pose.ty()}, ${pose.tz()})")
+                                                    }
+                                                } catch (ex: Exception) {
+                                                    Log.e(TAG, "Hit test during drag failed: ${ex.message}", ex)
+                                                }
+                                            }
+                                            
+                                            currentOnDragMove?.invoke(nodeId, e.x, e.y)
+                                        }
+                                    }
+                                    return@touchEvent true
+                                }
+                                
+                                // Fallback: placement hold tracking
+                                if (!isHoldActive) {
+                                    return@touchEvent false
+                                }
+                                
                                 val start = touchDownPosition
-                                if (isHoldActive && start != null) {
+                                if (start != null) {
                                     val dx = e.x - start.first
                                     val dy = e.y - start.second
                                     if (hypot(dx, dy) > touchSlopPx) {
@@ -442,6 +682,41 @@ fun ARView(
                             }
 
                             MotionEvent.ACTION_UP -> {
+                                // Check if we were tracking a node drag
+                                val nodeId = draggedNodeId
+                                if (nodeId != null) {
+                                    if (isDragging) {
+                                        Log.d(TAG, "Drag ENDED for object $nodeId at screen (${e.x}, ${e.y})")
+                                        
+                                        // Restore original scale
+                                        dragOriginalScales.remove(nodeId)?.let { originalScale ->
+                                            currentNodes[nodeId]?.scale = originalScale
+                                        }
+                                        
+                                        // Notify about final position
+                                        currentNodes[nodeId]?.let { node ->
+                                            val pos = node.worldPosition
+                                            currentOnObjectPositionChanged?.invoke(nodeId, pos.x, pos.y, pos.z)
+                                        }
+                                        
+                                        currentOnDragEnd?.invoke(nodeId, e.x, e.y)
+                                    } else {
+                                        // Was just a tap on the object, not a drag
+                                        val elapsed = System.currentTimeMillis() - dragTouchDownTime
+                                        Log.d(TAG, "Tap on object $nodeId (duration=${elapsed}ms) - not a drag")
+                                        // Could trigger selection here if needed
+                                    }
+                                    
+                                    // Reset drag state
+                                    resetDragState()
+                                    return@touchEvent true
+                                }
+                                
+                                // Fallback: placement hold handling
+                                if (!isHoldActive) {
+                                    return@touchEvent false
+                                }
+                                
                                 val downTime = touchDownTimeMs
                                 val start = touchDownPosition
                                 val holdDuration = if (downTime != null) System.currentTimeMillis() - downTime else 0L
@@ -452,18 +727,34 @@ fun ARView(
                                 if (shouldPlace && start != null) {
                                     performHitTestAndPlace(start.first, start.second)
                                 } else {
-                                    Log.d(TAG, "Ignoring tap: holdDuration=${holdDuration}ms (threshold=${LONG_PRESS_THRESHOLD_MS}ms)")
+                                    Log.d(TAG, "Ignoring tap: holdDuration=${holdDuration}ms")
                                 }
-
                                 true
                             }
 
                             MotionEvent.ACTION_CANCEL -> {
-                                cancelHoldFeedback()
-                                true
+                                // Cancel any ongoing drag
+                                val nodeId = draggedNodeId
+                                if (nodeId != null) {
+                                    Log.d(TAG, "Drag CANCELLED for object $nodeId")
+                                    
+                                    // Restore original position and scale
+                                    if (isDragging) {
+                                        restoreDraggedNodeState(nodeId)
+                                    }
+                                    
+                                    resetDragState()
+                                    return@touchEvent true
+                                }
+                                
+                                if (isHoldActive) {
+                                    cancelHoldFeedback()
+                                    return@touchEvent true
+                                }
+                                false
                             }
 
-                            else -> true
+                            else -> false  // Don't consume unknown events
                         }
                     }
 

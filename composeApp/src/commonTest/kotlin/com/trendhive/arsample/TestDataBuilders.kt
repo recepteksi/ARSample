@@ -48,13 +48,15 @@ object TestDataBuilders {
         arObjectId: String = "/path/to/model.glb",
         position: Vector3 = Vector3(0f, 0f, 0f),
         rotation: Quaternion = Quaternion.IDENTITY,
-        scale: Float = 1f
+        scale: Float = 1f,
+        createdAt: Long = System.currentTimeMillis()
     ): PlacedObject = PlacedObject(
         objectId = objectId,
         arObjectId = arObjectId,
         position = position,
         rotation = rotation,
-        scale = scale
+        scale = scale,
+        createdAt = createdAt
     )
 
     fun createTestVector3(

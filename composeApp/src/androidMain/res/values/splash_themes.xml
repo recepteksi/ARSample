@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash Screen Theme -->
+    <style name="Theme.ARSample.Starting" parent="Theme.SplashScreen">
+        <!-- Splash screen background color -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        
+        <!-- Splash screen icon (use app launcher icon) -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        
+        <!-- Post splash screen theme -->
+        <item name="postSplashScreenTheme">@style/Theme.ARSample</item>
+    </style>
+    
+    <!-- Main app theme -->
+    <style name="Theme.ARSample" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

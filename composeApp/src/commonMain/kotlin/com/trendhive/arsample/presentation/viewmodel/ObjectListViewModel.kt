@@ -40,6 +40,7 @@ class ObjectListViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val objects = getAllObjectsUseCase()
+                    .sortedByDescending { it.createdAt } // Sort newest first
                 _uiState.value = _uiState.value.copy(
                     objects = objects,
                     isLoading = false

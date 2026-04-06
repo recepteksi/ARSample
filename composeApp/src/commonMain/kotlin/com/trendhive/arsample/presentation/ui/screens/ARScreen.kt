@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
@@ -44,6 +45,9 @@ fun ARScreen(
     onObjectRemoved: (placedObjectId: String) -> Unit,
     onObjectDeleted: (objectId: String) -> Unit,
     onObjectPositionChanged: (placedObjectId: String, x: Float, y: Float, z: Float) -> Unit = { _, _, _, _ -> },
+    onDragStart: (objectId: String, touchX: Float, touchY: Float) -> Unit = { _, _, _ -> },
+    onDragUpdate: (newX: Float, newY: Float, newZ: Float, screenX: Float, screenY: Float, isOverTrash: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+    onDragEnd: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -125,17 +129,36 @@ fun ARScreen(
                     isDragging = true
                     draggingObjectId = objectId
                     isOverTrashZone = false
+                    // Call ViewModel drag start (with screen position 0,0 as placeholder)
+                    onDragStart(objectId, 0f, 0f)
                 },
-                onDragMove = { objectId, _, screenY ->
+                onDragMove = { objectId, screenX, screenY ->
                     if (draggingObjectId != objectId) return@PlatformARView
-                    isOverTrashZone = screenY > (screenHeightPx - trashZoneHeightPx)
+                    val isOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
+                    isOverTrashZone = isOverTrash
+                    
+                    // Find the current object to get its position
+                    val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
+                    if (currentObj != null) {
+                        val progress = if (isOverTrash) {
+                            ((screenY - (screenHeightPx - trashZoneHeightPx)) / trashZoneHeightPx).coerceIn(0f, 1f)
+                        } else 0f
+                        
+                        // Call ViewModel drag update
+                        onDragUpdate(
+                            currentObj.position.x,
+                            currentObj.position.y,
+                            currentObj.position.z,
+                            screenX,
+                            screenY,
+                            isOverTrash
+                        )
+                    }
                 },
                 onDragEnd = { objectId, _, screenY ->
                     if (draggingObjectId == objectId) {
-                        val droppedOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
-                        if (droppedOverTrash) {
-                            onObjectRemoved(objectId)
-                        }
+                        // Call ViewModel drag end (which handles trash zone logic)
+                        onDragEnd()
                     }
                     isDragging = false
                     draggingObjectId = null
@@ -189,12 +212,23 @@ fun ARScreen(
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
                             modifier = Modifier.weight(1f)
                         )
+                        // Cancel selection button
+                        IconButton(
+                            onClick = { onSelectObject(null) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(Res.string.cancel),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                         Button(
                             onClick = { showObjectList = true },
                         ) {
@@ -238,7 +272,7 @@ fun ARScreen(
                 onDismissRequest = { showPlacedObjects = false }
             ) {
                 PlacedObjectsList(
-                    placedObjects = uiState.placedObjects,
+                    placedObjects = uiState.placedObjects.sortedByDescending { it.createdAt },
                     onRemove = {
                         onObjectRemoved(it)
                         showPlacedObjects = false
@@ -540,11 +574,6 @@ private fun PlacedObjectListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(Res.string.remove),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

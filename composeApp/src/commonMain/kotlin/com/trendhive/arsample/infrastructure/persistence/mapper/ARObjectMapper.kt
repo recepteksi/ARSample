@@ -8,6 +8,7 @@ import com.trendhive.arsample.domain.model.ModelType
 import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.domain.model.Quaternion
 import com.trendhive.arsample.domain.model.Vector3
+import com.trendhive.arsample.domain.model.currentTimeMillis
 
 /**
  * Mapper for ARObject ↔ ARObjectDTO transformations.
@@ -66,7 +67,8 @@ class PlacedObjectMapper : BaseMapper<PlacedObjectDTO, PlacedObject>() {
             rotY = model.rotation.y,
             rotZ = model.rotation.z,
             rotW = model.rotation.w,
-            scale = model.scale
+            scale = model.scale,
+            createdAt = model.createdAt
         )
     }
 
@@ -76,7 +78,8 @@ class PlacedObjectMapper : BaseMapper<PlacedObjectDTO, PlacedObject>() {
             arObjectId = dto.arObjectId,
             position = Vector3(dto.posX, dto.posY, dto.posZ),
             rotation = Quaternion(dto.rotX, dto.rotY, dto.rotZ, dto.rotW),
-            scale = dto.scale
+            scale = dto.scale,
+            createdAt = dto.createdAt.takeIf { it > 0 } ?: currentTimeMillis()
         )
     }
     

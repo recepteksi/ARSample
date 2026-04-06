@@ -6,6 +6,7 @@ import com.trendhive.arsample.domain.exception.ValidationException
 /**
  * Value Object representing a valid 3D model file URI.
  * Supports GLB, USDZ, FBX, OBJ formats.
+ * Supports both file paths and Android content:// URIs.
  * 
  * Following DDD Value Object pattern:
  * - Validation via factory method (create)
@@ -20,6 +21,11 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
         /**
          * Factory method to create a ModelUri with validation.
          * 
+         * Accepts:
+         * - Android content:// URIs (e.g., content://com.android.providers.downloads.documents/...)
+         * - File scheme URIs (e.g., file:///path/to/model.glb)
+         * - File paths with valid extensions (.glb, .usdz, .fbx, .obj)
+         * 
          * @param uri The file URI to validate
          * @return Result.success with ValidModelUri if valid, Result.failure with ValidationException otherwise
          */
@@ -27,6 +33,9 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
             return when {
                 uri.isBlank() -> 
                     Result.failure(ValidationException("Model URI cannot be blank"))
+                isContentUri(uri) -> 
+                    // Content/file URIs accepted (extension validation happens at file read time)
+                    Result.success(ValidModelUri(uri))
                 !hasValidExtension(uri) -> 
                     Result.failure(ValidationException(
                         "Invalid model format. Supported: ${VALID_EXTENSIONS.joinToString { ".$it" }}"
@@ -34,6 +43,10 @@ sealed class ModelUri private constructor(value: String) : BaseValueObject<Strin
                 else -> 
                     Result.success(ValidModelUri(uri))
             }
+        }
+        
+        private fun isContentUri(uri: String): Boolean {
+            return uri.startsWith("content://") || uri.startsWith("file://")
         }
         
         private fun hasValidExtension(uri: String): Boolean {

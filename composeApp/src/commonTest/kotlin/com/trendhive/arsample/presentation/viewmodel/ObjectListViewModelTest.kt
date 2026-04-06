@@ -252,4 +252,39 @@ class ObjectListViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(1, state.objects.size)
     }
+
+    @Test
+    fun `loadObjects should sort objects by createdAt descending (newest first)`() = runTest {
+        // Given: Multiple objects with different timestamps
+        val oldObject = TestDataBuilders.createTestARObject(
+            id = "old",
+            name = "Old Object",
+            createdAt = 1000L
+        )
+        val newObject = TestDataBuilders.createTestARObject(
+            id = "new",
+            name = "New Object",
+            createdAt = 3000L
+        )
+        val middleObject = TestDataBuilders.createTestARObject(
+            id = "middle",
+            name = "Middle Object",
+            createdAt = 2000L
+        )
+
+        val mockUseCase = mockk<GetAllObjectsUseCase>()
+        // Return objects in wrong order (not sorted)
+        coEvery { mockUseCase() } returns listOf(oldObject, middleObject, newObject)
+
+        // When
+        val viewModel = createViewModel(getAllObjectsUseCase = mockUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then: Objects should be sorted newest first
+        val state = viewModel.uiState.value
+        assertEquals(3, state.objects.size)
+        assertEquals("new", state.objects[0].id)     // 3000L - newest
+        assertEquals("middle", state.objects[1].id)  // 2000L
+        assertEquals("old", state.objects[2].id)     // 1000L - oldest
+    }
 }
