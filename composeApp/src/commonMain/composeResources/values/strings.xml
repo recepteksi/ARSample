@@ -29,4 +29,6 @@
     <string name="cancel">Cancel</string>
     <string name="error_occurred">An error occurred</string>
     <string name="long_press_to_place">Long press to place</string>
+    <string name="release_to_delete">Release to delete</string>
+    <string name="drag_to_delete">Drag here to delete</string>
 </resources>

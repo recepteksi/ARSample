@@ -151,10 +151,7 @@ fun ARScreen(
                     
                     // Find the current object to get its position
                     val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
-                    // FIX: Always call onDragUpdate even if currentObj is not found
-                    // Use default position if object not found (position will be ignored if dragging to trash)
                     val position = currentObj?.position
-                    val progress = if (isOverTrash) 1f else 0f
                     
                     // Call ViewModel drag update with position (use 0,0,0 if not found)
                     onDragUpdate(
@@ -402,7 +399,7 @@ fun TrashZone(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(Res.string.delete),
                     tint = if (isHovered)
                         MaterialTheme.colorScheme.onError
                     else
@@ -411,7 +408,7 @@ fun TrashZone(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (isHovered) "Release" else "Delete",
+                    text = stringResource(if (isHovered) Res.string.release_to_delete else Res.string.drag_to_delete),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isHovered)
                         MaterialTheme.colorScheme.onError
