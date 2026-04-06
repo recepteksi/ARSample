@@ -28,4 +28,5 @@
     <string name="format">Format</string>
     <string name="cancel">Cancel</string>
     <string name="error_occurred">An error occurred</string>
+    <string name="long_press_to_place">Long press to place</string>
 </resources>
