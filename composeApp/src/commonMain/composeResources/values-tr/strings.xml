@@ -28,4 +28,7 @@
     <string name="format">Format</string>
     <string name="cancel">İptal</string>
     <string name="error_occurred">Bir hata oluştu</string>
+    <string name="long_press_to_place">Yerleştirmek için basılı tutun</string>
+    <string name="release_to_delete">Silmek için bırakın</string>
+    <string name="drag_to_delete">Silmek için buraya sürükleyin</string>
 </resources>

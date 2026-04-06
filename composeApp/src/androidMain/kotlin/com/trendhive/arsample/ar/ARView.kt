@@ -641,16 +641,58 @@ fun ARView(
                                                     val hitResults = f.hitTest(e.x, e.y)
                                                     val validHits = filterHitResults(hitResults)
                                                     
-                                                    if (validHits.isNotEmpty()) {
-                                                        val bestHit = validHits.first()
-                                                        val pose = bestHit.hitPose
-                                                        
-                                                        // Update node position directly
-                                                        currentNodes[nodeId]?.let { node ->
+                                                    currentNodes[nodeId]?.let { node ->
+                                                        if (validHits.isNotEmpty()) {
+                                                            val bestHit = validHits.first()
+                                                            val pose = bestHit.hitPose
                                                             node.position = Position(pose.tx(), pose.ty(), pose.tz())
+                                                            Log.d(TAG, "Drag MOVE: updated position to (${pose.tx()}, ${pose.ty()}, ${pose.tz()})")
+                                                        } else {
+                                                            // No valid plane hit - use camera ray projection
+                                                            // Keep object at same distance from camera, but move along screen
+                                                            val cam = f.camera
+                                                            if (cam.trackingState == TrackingState.TRACKING) {
+                                                                val camPose = cam.pose
+                                                                val oldPos = node.position
+                                                                
+                                                                // Calculate distance from camera to object
+                                                                val dx = oldPos.x - camPose.tx()
+                                                                val dy = oldPos.y - camPose.ty()
+                                                                val dz = oldPos.z - camPose.tz()
+                                                                val dist = kotlin.math.sqrt(dx*dx + dy*dy + dz*dz)
+                                                                
+                                                                // Get screen-normalized coordinates (-1 to 1)
+                                                                val screenWidth = this.width.toFloat()
+                                                                val screenHeight = this.height.toFloat()
+                                                                val normX = (e.x / screenWidth) * 2 - 1
+                                                                val normY = 1 - (e.y / screenHeight) * 2
+                                                                
+                                                                // Project to world using camera view matrix
+                                                                val viewMatrix = FloatArray(16)
+                                                                cam.getViewMatrix(viewMatrix, 0)
+                                                                
+                                                                // Simple approximation: move in camera's X/Y plane
+                                                                // Get camera's right and up vectors from pose
+                                                                val rightX = camPose.getXAxis()[0]
+                                                                val rightY = camPose.getXAxis()[1]
+                                                                val rightZ = camPose.getXAxis()[2]
+                                                                
+                                                                val upX = camPose.getYAxis()[0]
+                                                                val upY = camPose.getYAxis()[1]
+                                                                val upZ = camPose.getYAxis()[2]
+                                                                
+                                                                // Scale movement based on distance (farther objects need bigger moves)
+                                                                val scale = dist * 0.5f
+                                                                
+                                                                // Calculate new position
+                                                                val newX = camPose.tx() - camPose.getZAxis()[0] * dist + rightX * normX * scale
+                                                                val newY = oldPos.y // Keep Y (height) the same
+                                                                val newZ = camPose.tz() - camPose.getZAxis()[2] * dist + rightZ * normX * scale
+                                                                
+                                                                node.position = Position(newX, newY, newZ)
+                                                                Log.d(TAG, "Drag MOVE (raycast): updated position to ($newX, $newY, $newZ)")
+                                                            }
                                                         }
-                                                        
-                                                        Log.d(TAG, "Drag MOVE: updated position to (${pose.tx()}, ${pose.ty()}, ${pose.tz()})")
                                                     }
                                                 } catch (ex: Exception) {
                                                     Log.e(TAG, "Hit test during drag failed: ${ex.message}", ex)

@@ -20,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.trendhive.arsample.ar.PlatformARView
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.PlacedObject
@@ -107,9 +109,19 @@ fun ARScreen(
                 .padding(paddingValues)
         ) {
             val density = LocalDensity.current
-            val trashZoneHeight = 80.dp
-            val trashZoneHeightPx = with(density) { trashZoneHeight.toPx() }
+            val trashZoneSize = 80.dp
+            val trashZonePadding = 16.dp
+            val trashZoneSizePx = with(density) { trashZoneSize.toPx() }
+            val trashZonePaddingPx = with(density) { trashZonePadding.toPx() }
             val screenHeightPx = with(density) { maxHeight.toPx() }
+            val screenWidthPx = with(density) { maxWidth.toPx() }
+            
+            // Trash zone is at bottom-right: check both X and Y coordinates
+            fun isOverTrashZone(screenX: Float, screenY: Float): Boolean {
+                val trashLeft = screenWidthPx - trashZoneSizePx - trashZonePaddingPx
+                val trashTop = screenHeightPx - trashZoneSizePx - trashZonePaddingPx
+                return screenX >= trashLeft && screenY >= trashTop
+            }
 
             // Platform-specific AR View
             // CRITICAL FIX: Use currentUiState (rememberUpdatedState) instead of uiState
@@ -134,29 +146,41 @@ fun ARScreen(
                 },
                 onDragMove = { objectId, screenX, screenY ->
                     if (draggingObjectId != objectId) return@PlatformARView
-                    val isOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
+                    val isOverTrash = isOverTrashZone(screenX, screenY)
                     isOverTrashZone = isOverTrash
                     
                     // Find the current object to get its position
                     val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
-                    if (currentObj != null) {
-                        val progress = if (isOverTrash) {
-                            ((screenY - (screenHeightPx - trashZoneHeightPx)) / trashZoneHeightPx).coerceIn(0f, 1f)
-                        } else 0f
-                        
-                        // Call ViewModel drag update
-                        onDragUpdate(
-                            currentObj.position.x,
-                            currentObj.position.y,
-                            currentObj.position.z,
-                            screenX,
-                            screenY,
-                            isOverTrash
-                        )
-                    }
+                    val position = currentObj?.position
+                    
+                    // Call ViewModel drag update with position (use 0,0,0 if not found)
+                    onDragUpdate(
+                        position?.x ?: 0f,
+                        position?.y ?: 0f,
+                        position?.z ?: 0f,
+                        screenX,
+                        screenY,
+                        isOverTrash
+                    )
                 },
-                onDragEnd = { objectId, _, screenY ->
+                onDragEnd = { objectId, screenX, screenY ->
                     if (draggingObjectId == objectId) {
+                        // FIX: Perform final trash zone check at drag end position
+                        // This ensures deletion works even if last onDragMove was missed
+                        val finalIsOverTrash = isOverTrashZone(screenX, screenY)
+                        if (finalIsOverTrash) {
+                            // Update ViewModel state one last time before ending drag
+                            val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
+                            val position = currentObj?.position
+                            onDragUpdate(
+                                position?.x ?: 0f,
+                                position?.y ?: 0f,
+                                position?.z ?: 0f,
+                                screenX,
+                                screenY,
+                                true  // Force isOverTrash = true
+                            )
+                        }
                         // Call ViewModel drag end (which handles trash zone logic)
                         onDragEnd()
                     }
@@ -201,38 +225,50 @@ fun ARScreen(
                 )
             }
 
-            // Selected object controls
+            // Selected object indicator - compact chip style
             uiState.selectedObjectId?.let { selectedId ->
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                        .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                    tonalElevation = 2.dp
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            imageVector = Icons.Default.ViewInAr,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        // Cancel selection button
+                        Column {
+                            Text(
+                                text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = stringResource(Res.string.long_press_to_place),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Subtle cancel button
                         IconButton(
-                            onClick = { onSelectObject(null) }
+                            onClick = { onSelectObject(null) },
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(Res.string.cancel),
-                                tint = MaterialTheme.colorScheme.error
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
-                        Button(
-                            onClick = { showObjectList = true },
-                        ) {
-                            Text(stringResource(Res.string.objects))
                         }
                     }
                 }
@@ -241,7 +277,7 @@ fun ARScreen(
             TrashZone(
                 isVisible = isDragging,
                 isHovered = isOverTrashZone,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomEnd)
             )
 
         }
@@ -346,32 +382,34 @@ fun TrashZone(
     ) {
         Box(
             modifier = modifier
-                .fillMaxWidth()
-                .height(80.dp)
+                .padding(16.dp)
+                .size(80.dp)
                 .background(
-                    if (isHovered)
+                    color = if (isHovered)
                         MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                     else
-                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(16.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(Res.string.delete),
                     tint = if (isHovered)
                         MaterialTheme.colorScheme.onError
                     else
                         MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(if (isHovered) 32.dp else 24.dp)
+                    modifier = Modifier.size(if (isHovered) 32.dp else 28.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (isHovered) "Release to Delete" else "Drag here to delete",
+                    text = stringResource(if (isHovered) Res.string.release_to_delete else Res.string.drag_to_delete),
+                    style = MaterialTheme.typography.labelSmall,
                     color = if (isHovered)
                         MaterialTheme.colorScheme.onError
                     else
