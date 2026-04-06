@@ -109,9 +109,19 @@ fun ARScreen(
                 .padding(paddingValues)
         ) {
             val density = LocalDensity.current
-            val trashZoneHeight = 80.dp
-            val trashZoneHeightPx = with(density) { trashZoneHeight.toPx() }
+            val trashZoneSize = 80.dp
+            val trashZonePadding = 16.dp
+            val trashZoneSizePx = with(density) { trashZoneSize.toPx() }
+            val trashZonePaddingPx = with(density) { trashZonePadding.toPx() }
             val screenHeightPx = with(density) { maxHeight.toPx() }
+            val screenWidthPx = with(density) { maxWidth.toPx() }
+            
+            // Trash zone is at bottom-right: check both X and Y coordinates
+            fun isOverTrashZone(screenX: Float, screenY: Float): Boolean {
+                val trashLeft = screenWidthPx - trashZoneSizePx - trashZonePaddingPx
+                val trashTop = screenHeightPx - trashZoneSizePx - trashZonePaddingPx
+                return screenX >= trashLeft && screenY >= trashTop
+            }
 
             // Platform-specific AR View
             // CRITICAL FIX: Use currentUiState (rememberUpdatedState) instead of uiState
@@ -136,7 +146,7 @@ fun ARScreen(
                 },
                 onDragMove = { objectId, screenX, screenY ->
                     if (draggingObjectId != objectId) return@PlatformARView
-                    val isOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
+                    val isOverTrash = isOverTrashZone(screenX, screenY)
                     isOverTrashZone = isOverTrash
                     
                     // Find the current object to get its position
@@ -144,9 +154,7 @@ fun ARScreen(
                     // FIX: Always call onDragUpdate even if currentObj is not found
                     // Use default position if object not found (position will be ignored if dragging to trash)
                     val position = currentObj?.position
-                    val progress = if (isOverTrash) {
-                        ((screenY - (screenHeightPx - trashZoneHeightPx)) / trashZoneHeightPx).coerceIn(0f, 1f)
-                    } else 0f
+                    val progress = if (isOverTrash) 1f else 0f
                     
                     // Call ViewModel drag update with position (use 0,0,0 if not found)
                     onDragUpdate(
@@ -162,12 +170,11 @@ fun ARScreen(
                     if (draggingObjectId == objectId) {
                         // FIX: Perform final trash zone check at drag end position
                         // This ensures deletion works even if last onDragMove was missed
-                        val finalIsOverTrash = screenY > (screenHeightPx - trashZoneHeightPx)
+                        val finalIsOverTrash = isOverTrashZone(screenX, screenY)
                         if (finalIsOverTrash) {
                             // Update ViewModel state one last time before ending drag
                             val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
                             val position = currentObj?.position
-                            val progress = ((screenY - (screenHeightPx - trashZoneHeightPx)) / trashZoneHeightPx).coerceIn(0f, 1f)
                             onDragUpdate(
                                 position?.x ?: 0f,
                                 position?.y ?: 0f,
