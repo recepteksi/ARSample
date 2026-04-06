@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,8 +20,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.trendhive.arsample.ar.PlatformARView
@@ -383,17 +386,32 @@ fun TrashZone(
         Box(
             modifier = modifier
                 .padding(16.dp)
-                .size(80.dp)
+                .size(width = 100.dp, height = 90.dp)
+                .shadow(
+                    elevation = if (isHovered) 8.dp else 4.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f),
+                    spotColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                )
                 .background(
                     color = if (isHovered)
-                        MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
                     else
                         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isHovered)
+                        MaterialTheme.colorScheme.onError.copy(alpha = 0.3f)
+                    else
+                        MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(16.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Column(
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -406,14 +424,16 @@ fun TrashZone(
                         MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(if (isHovered) 32.dp else 28.dp)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = stringResource(if (isHovered) Res.string.release_to_delete else Res.string.drag_to_delete),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isHovered)
                         MaterialTheme.colorScheme.onError
                     else
-                        MaterialTheme.colorScheme.onErrorContainer
+                        MaterialTheme.colorScheme.onErrorContainer,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
