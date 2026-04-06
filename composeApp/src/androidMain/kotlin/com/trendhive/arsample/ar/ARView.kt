@@ -54,6 +54,11 @@ private const val DEFAULT_SCALE = 0.3f
 private const val MIN_SCALE = 0.1f
 private const val MAX_SCALE = 5.0f
 
+// Drag gesture configuration constants
+private const val DRAG_SLOP_PX = 24f  // Movement threshold in pixels to start drag
+private const val DRAG_LONG_PRESS_MS = 150L  // Time threshold in ms to recognize as potential drag
+private const val DRAG_FEEDBACK_SCALE_MULTIPLIER = 1.1f  // Visual feedback scale during drag
+
 @Composable
 fun ARView(
     modifier: Modifier = Modifier,
@@ -104,9 +109,24 @@ fun ARView(
     var dragTouchDownPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var dragStartNodePosition by remember { mutableStateOf<Position?>(null) }
     
-    // Drag configuration constants
-    val DRAG_SLOP_PX = 24f  // Movement threshold in pixels to start drag
-    val DRAG_LONG_PRESS_MS = 150L  // Time threshold in ms to recognize as potential drag
+    // Helper function to reset drag state
+    fun resetDragState() {
+        isDragging = false
+        draggedNodeId = null
+        dragStartNodePosition = null
+        dragTouchDownPosition = null
+        dragTouchDownTime = 0L
+    }
+    
+    // Helper function to restore dragged node's original state
+    fun restoreDraggedNodeState(nodeId: String) {
+        dragStartNodePosition?.let { startPos ->
+            currentNodes[nodeId]?.position = startPos
+        }
+        dragOriginalScales.remove(nodeId)?.let { originalScale ->
+            currentNodes[nodeId]?.scale = originalScale
+        }
+    }
 
     fun normalizeModelLocation(location: String): String {
         return when {
@@ -321,7 +341,7 @@ fun ARView(
                                 currentOnDragMove?.invoke(placedObjectId, e.x, e.y)
 
                                 dragOriginalScales[placedObjectId] = scale
-                                scale = Scale(scale.x * 1.1f, scale.y * 1.1f, scale.z * 1.1f)
+                                scale = Scale(scale.x * DRAG_FEEDBACK_SCALE_MULTIPLIER, scale.y * DRAG_FEEDBACK_SCALE_MULTIPLIER, scale.z * DRAG_FEEDBACK_SCALE_MULTIPLIER)
                                 true
                             }
 
@@ -470,16 +490,9 @@ fun ARView(
                                 Log.d(TAG, "Drag cancelled due to multi-touch")
                                 // Restore original position
                                 draggedNodeId?.let { nodeId ->
-                                    dragStartNodePosition?.let { startPos ->
-                                        currentNodes[nodeId]?.position = startPos
-                                    }
-                                    dragOriginalScales.remove(nodeId)?.let { originalScale ->
-                                        currentNodes[nodeId]?.scale = originalScale
-                                    }
+                                    restoreDraggedNodeState(nodeId)
                                 }
-                                isDragging = false
-                                draggedNodeId = null
-                                dragStartNodePosition = null
+                                resetDragState()
                             }
                             return@touchEvent true
                         }
@@ -546,7 +559,7 @@ fun ARView(
                                             // Visual feedback: scale up
                                             currentNodes[nodeId]?.let { node ->
                                                 dragOriginalScales[nodeId] = node.scale
-                                                node.scale = Scale(node.scale.x * 1.1f, node.scale.y * 1.1f, node.scale.z * 1.1f)
+                                                node.scale = Scale(node.scale.x * DRAG_FEEDBACK_SCALE_MULTIPLIER, node.scale.y * DRAG_FEEDBACK_SCALE_MULTIPLIER, node.scale.z * DRAG_FEEDBACK_SCALE_MULTIPLIER)
                                             }
                                             
                                             currentOnDragStart?.invoke(nodeId)
@@ -627,10 +640,7 @@ fun ARView(
                                     }
                                     
                                     // Reset drag state
-                                    isDragging = false
-                                    draggedNodeId = null
-                                    dragStartNodePosition = null
-                                    dragTouchDownPosition = null
+                                    resetDragState()
                                     return@touchEvent true
                                 }
                                 
@@ -662,18 +672,10 @@ fun ARView(
                                     
                                     // Restore original position and scale
                                     if (isDragging) {
-                                        dragStartNodePosition?.let { startPos ->
-                                            currentNodes[nodeId]?.position = startPos
-                                        }
-                                        dragOriginalScales.remove(nodeId)?.let { originalScale ->
-                                            currentNodes[nodeId]?.scale = originalScale
-                                        }
+                                        restoreDraggedNodeState(nodeId)
                                     }
                                     
-                                    isDragging = false
-                                    draggedNodeId = null
-                                    dragStartNodePosition = null
-                                    dragTouchDownPosition = null
+                                    resetDragState()
                                     return@touchEvent true
                                 }
                                 
