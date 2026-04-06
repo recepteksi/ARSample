@@ -6,24 +6,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.trendhive.arsample.application.usecase.*
 import com.trendhive.arsample.presentation.ui.screens.ARScreen
 import com.trendhive.arsample.presentation.ui.screens.ObjectListScreen
 import com.trendhive.arsample.presentation.viewmodel.ARViewModel
 import com.trendhive.arsample.presentation.viewmodel.ObjectListViewModel
+import org.koin.compose.koinInject
 
 @Composable
-fun App(
-    importObjectUseCase: ImportObjectUseCase,
-    getAllObjectsUseCase: GetAllObjectsUseCase,
-    deleteObjectUseCase: DeleteObjectUseCase,
-    placeObjectInSceneUseCase: PlaceObjectInSceneUseCase,
-    removeObjectFromSceneUseCase: RemoveObjectFromSceneUseCase,
-    getSceneUseCase: GetSceneUseCase,
-    saveSceneUseCase: SaveSceneUseCase,
-    moveObjectUseCase: MoveObjectUseCase,
-    sceneRepository: com.trendhive.arsample.domain.repository.ARSceneRepository
-) {
+fun App() {
     MaterialTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -31,26 +21,11 @@ fun App(
         ) {
             var currentScreen by remember { mutableStateOf<Screen>(Screen.AR(null)) }
 
-            val objectListViewModel: ObjectListViewModel = viewModel {
-                ObjectListViewModel(
-                    getAllObjectsUseCase,
-                    deleteObjectUseCase,
-                    importObjectUseCase
-                )
-            }
+            // Inject ViewModels via Koin
+            val objectListViewModel: ObjectListViewModel = koinInject()
             val objectListUiState by objectListViewModel.uiState.collectAsState()
             
-            // Create ARViewModel once, outside the when block
-            val arViewModel: ARViewModel = viewModel {
-                ARViewModel(
-                    placeObjectInSceneUseCase,
-                    removeObjectFromSceneUseCase,
-                    getSceneUseCase,
-                    saveSceneUseCase,
-                    sceneRepository,
-                    moveObjectUseCase
-                )
-            }
+            val arViewModel: ARViewModel = koinInject()
             val arUiState by arViewModel.uiState.collectAsState()
 
             when (val screen = currentScreen) {
