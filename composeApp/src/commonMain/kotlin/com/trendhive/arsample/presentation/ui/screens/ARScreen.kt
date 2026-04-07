@@ -252,50 +252,57 @@ fun ARScreen(
                 )
             }
 
-            // Selected object indicator - compact chip style
-            uiState.selectedObjectId?.let { selectedId ->
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-                    tonalElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Selected object indicator - positioned at top-left below app bar
+            AnimatedVisibility(
+                visible = uiState.selectedObjectId != null,
+                enter = fadeIn(tween(200)) + slideInVertically { -it },
+                exit = fadeOut(tween(200)) + slideOutVertically { -it },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 12.dp, top = 8.dp)
+            ) {
+                uiState.selectedObjectId?.let { selectedId ->
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.7f),
+                        tonalElevation = 4.dp
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ViewInAr,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column {
-                            Text(
-                                text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(Res.string.long_press_to_place),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        // Subtle cancel button
-                        IconButton(
-                            onClick = { onSelectObject(null) },
-                            modifier = Modifier.size(24.dp)
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(Res.string.cancel),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = Icons.Default.ViewInAr,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
                             )
+                            Column {
+                                Text(
+                                    text = selectedObject?.name ?: selectedId.take(8),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = stringResource(Res.string.long_press_to_place),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                            // Cancel button
+                            IconButton(
+                                onClick = { onSelectObject(null) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(Res.string.cancel),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }

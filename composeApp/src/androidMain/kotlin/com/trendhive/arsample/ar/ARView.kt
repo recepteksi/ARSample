@@ -92,6 +92,14 @@ fun ARView(
     
     val coroutineScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+    
+    // Get MediaRepository from Koin for direct recording callback registration
+    val koin = org.koin.compose.LocalKoinApplication.current
+    val mediaRepository = remember(koin) {
+        runCatching { 
+            koin.get<com.trendhive.arsample.domain.repository.MediaRepository>()
+        }.getOrNull()
+    }
 
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
     
@@ -470,25 +478,39 @@ fun ARView(
     }
     
     // Setup video recording callbacks when ARSceneView is ready
-    DisposableEffect(arSceneView) {
+    DisposableEffect(arSceneView, mediaRepository) {
         val view = arSceneView
         if (view != null) {
             // Set ARSceneView in video recorder
             videoRecorder.setARSceneView(view)
             
-            // Register recording callbacks with MediaRepository
-            currentOnRecordingCallbacksReady?.invoke(
-                // onStart callback - called when startVideoRecording is invoked
-                { outputPath ->
-                    Log.d(TAG, "Starting video recording to: $outputPath")
-                    videoRecorder.startRecording(outputPath)
-                },
-                // onStop callback - called when stopVideoRecording is invoked
-                {
-                    Log.d(TAG, "Stopping video recording")
-                    videoRecorder.stopRecording()
-                }
-            )
+            // Register recording callbacks directly with MediaRepository
+            val repo = mediaRepository
+            if (repo != null && repo is com.trendhive.arsample.infrastructure.persistence.local.MediaRepositoryImpl) {
+                Log.d(TAG, "Registering video recording callbacks with MediaRepository")
+                repo.setRecordingCallbacks(
+                    onStart = { outputPath ->
+                        Log.d(TAG, "Starting video recording to: $outputPath")
+                        videoRecorder.startRecording(outputPath)
+                    },
+                    onStop = {
+                        Log.d(TAG, "Stopping video recording")
+                        videoRecorder.stopRecording()
+                    }
+                )
+            } else {
+                // Fallback to callback-based approach if provided
+                currentOnRecordingCallbacksReady?.invoke(
+                    { outputPath ->
+                        Log.d(TAG, "Starting video recording to: $outputPath")
+                        videoRecorder.startRecording(outputPath)
+                    },
+                    {
+                        Log.d(TAG, "Stopping video recording")
+                        videoRecorder.stopRecording()
+                    }
+                )
+            }
         }
         
         onDispose {
@@ -497,7 +519,12 @@ fun ARView(
                 videoRecorder.stopRecording()
             }
             // Clear recording callbacks
-            currentOnRecordingCallbacksClear?.invoke()
+            val repo = mediaRepository
+            if (repo != null && repo is com.trendhive.arsample.infrastructure.persistence.local.MediaRepositoryImpl) {
+                repo.clearRecordingCallbacks()
+            } else {
+                currentOnRecordingCallbacksClear?.invoke()
+            }
             videoRecorder.setARSceneView(null)
         }
     }

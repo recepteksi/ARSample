@@ -20,10 +20,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,8 +33,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -76,13 +76,14 @@ fun CameraStyleRecordButton(
     
     // Animate inner shape transformation (circle to square)
     val innerCornerRadius by animateFloatAsState(
-        targetValue = if (isRecording) 6f else 50f,
+        targetValue = if (isRecording) 4f else 50f,
         animationSpec = tween(durationMillis = 200),
         label = "inner_shape"
     )
     
-    val innerSize by animateFloatAsState(
-        targetValue = if (isRecording) 24f else 52f,
+    // Inner size relative to outer - larger when idle, smaller square when recording
+    val innerSizeRatio by animateFloatAsState(
+        targetValue = if (isRecording) 0.35f else 0.65f,
         animationSpec = tween(durationMillis = 200),
         label = "inner_size"
     )
@@ -90,11 +91,10 @@ fun CameraStyleRecordButton(
     Box(
         modifier = modifier
             .scale(scale)
-            .size(80.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.2f))
             .border(
-                width = 4.dp,
+                width = 3.dp,
                 color = Color.White,
                 shape = CircleShape
             )
@@ -105,11 +105,11 @@ fun CameraStyleRecordButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Inner red circle/square
+        // Inner red circle/square - size calculated from parent
         Box(
             modifier = Modifier
-                .size(innerSize.dp)
-                .clip(RoundedCornerShape(innerCornerRadius.dp))
+                .fillMaxSize(innerSizeRatio)
+                .clip(RoundedCornerShape(if (isRecording) 4.dp else 50.dp))
                 .background(Color(0xFFFF0000))
         )
     }
@@ -197,9 +197,8 @@ fun CameraControlButton(
 ) {
     Box(
         modifier = modifier
-            .size(56.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.White.copy(alpha = 0.2f))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -209,6 +208,7 @@ fun CameraControlButton(
 
 /**
  * Complete camera controls bar with photo capture, record button, and gallery access.
+ * Clean centered layout with symmetrical spacing.
  */
 @Composable
 fun CameraControlsBar(
@@ -219,66 +219,80 @@ fun CameraControlsBar(
     onSwitchCamera: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        // Gallery button (bottom left)
-        CameraControlButton(
-            onClick = onOpenGallery,
-            enabled = !isRecording
+        // Semi-transparent background for better visibility
+        Surface(
+            modifier = Modifier
+                .wrapContentSize(),
+            shape = RoundedCornerShape(40.dp),
+            color = Color.Black.copy(alpha = 0.5f)
         ) {
-            Icon(
-                imageVector = Icons.Default.Collections,
-                contentDescription = "Open Gallery",
-                tint = if (isRecording) Color.Gray else Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        
-        // Photo capture button (left of record)
-        CameraControlButton(
-            onClick = onCapturePhoto,
-            modifier = Modifier.offset(x = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.CameraAlt,
-                contentDescription = "Capture Photo",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        
-        // Main record button (center, larger)
-        CameraStyleRecordButton(
-            isRecording = isRecording,
-            onToggleRecording = onToggleRecording
-        )
-        
-        // Switch camera button (right of record) - placeholder for symmetry
-        if (onSwitchCamera != null) {
-            CameraControlButton(
-                onClick = onSwitchCamera,
-                modifier = Modifier.offset(x = (-16).dp),
-                enabled = !isRecording
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.FlipCameraAndroid,
-                    contentDescription = "Switch Camera",
-                    tint = if (isRecording) Color.Gray else Color.White,
-                    modifier = Modifier.size(28.dp)
+                // Gallery button
+                CameraControlButton(
+                    onClick = onOpenGallery,
+                    enabled = !isRecording,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Collections,
+                        contentDescription = "Open Gallery",
+                        tint = if (isRecording) Color.Gray else Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                // Photo capture button
+                CameraControlButton(
+                    onClick = onCapturePhoto,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Capture Photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                // Main record button (center, larger)
+                CameraStyleRecordButton(
+                    isRecording = isRecording,
+                    onToggleRecording = onToggleRecording,
+                    modifier = Modifier.size(72.dp)
                 )
+                
+                // Placeholder for symmetry (or switch camera if available)
+                if (onSwitchCamera != null) {
+                    CameraControlButton(
+                        onClick = onSwitchCamera,
+                        enabled = !isRecording,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FlipCameraAndroid,
+                            contentDescription = "Switch Camera",
+                            tint = if (isRecording) Color.Gray else Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(48.dp))
+                }
+                
+                // Empty spacer for symmetry
+                Spacer(modifier = Modifier.size(48.dp))
             }
-        } else {
-            // Empty spacer for alignment
-            Box(modifier = Modifier.size(56.dp).offset(x = (-16).dp))
         }
-        
-        // Empty spacer for symmetry with gallery button
-        Box(modifier = Modifier.size(56.dp))
     }
 }
 
