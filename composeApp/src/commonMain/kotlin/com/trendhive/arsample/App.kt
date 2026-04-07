@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.trendhive.arsample.presentation.ui.screens.ARScreen
+import com.trendhive.arsample.presentation.ui.screens.ObjectGalleryScreen
 import com.trendhive.arsample.presentation.ui.screens.ObjectListScreen
 import com.trendhive.arsample.presentation.viewmodel.ARViewModel
 import com.trendhive.arsample.presentation.viewmodel.ObjectListViewModel
@@ -43,6 +44,23 @@ fun App() {
                         onDeleteObject = { objectListViewModel.deleteObject(it) }
                     )
                 }
+                is Screen.ObjectGallery -> {
+                    ObjectGalleryScreen(
+                        uiState = objectListUiState,
+                        onObjectClick = { arObject ->
+                            objectListViewModel.clearImportSuccess()
+                            currentScreen = Screen.AR(arObject.id)
+                        },
+                        onObjectDelete = { id ->
+                            objectListViewModel.deleteObject(id)
+                        },
+                        onImportClick = { uri, name, type ->
+                            objectListViewModel.importObject(uri, name, type)
+                        },
+                        onNavigateBack = { currentScreen = Screen.AR(null) },
+                        onNavigateToAR = { currentScreen = Screen.AR(null) }
+                    )
+                }
                 is Screen.AR -> {
                     LaunchedEffect(screen.selectedObjectId) {
                         if (screen.selectedObjectId != null) {
@@ -54,7 +72,7 @@ fun App() {
                         uiState = arUiState,
                         availableObjects = objectListUiState.objects,
                         onSelectObject = { arViewModel.selectObject(it) },
-                        onNavigateBack = { currentScreen = Screen.ObjectList },
+                        onNavigateBack = { currentScreen = Screen.ObjectGallery },
                         onImportObject = { uri, name, type ->
                             objectListViewModel.importObject(uri, name, type)
                         },
@@ -101,5 +119,6 @@ fun App() {
 
 sealed class Screen {
     data object ObjectList : Screen()
+    data object ObjectGallery : Screen()
     data class AR(val selectedObjectId: String?) : Screen()
 }

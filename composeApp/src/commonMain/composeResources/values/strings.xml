@@ -31,4 +31,9 @@
     <string name="long_press_to_place">Long press to place</string>
     <string name="release_to_delete">Release to delete</string>
     <string name="drag_to_delete">Drag here to delete</string>
+    <string name="object_gallery">Object Gallery</string>
+    <string name="search_objects">Search objects…</string>
+    <string name="import_first_object">Import First Object</string>
+    <string name="no_results_found">No Results Found</string>
+    <string name="no_results_for_query">No objects match \"%s\"</string>
 </resources>
