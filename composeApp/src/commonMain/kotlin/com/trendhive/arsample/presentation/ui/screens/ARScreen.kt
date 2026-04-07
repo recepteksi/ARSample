@@ -1,6 +1,11 @@
 package com.trendhive.arsample.presentation.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -11,16 +16,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,6 +44,7 @@ import com.trendhive.arsample.presentation.ui.components.ImportDialog
 import com.trendhive.arsample.presentation.ui.components.MenuIcon
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ARUiState
+import com.trendhive.arsample.presentation.viewmodel.RecordingState
 import org.jetbrains.compose.resources.stringResource
 import arsample.composeapp.generated.resources.Res
 import arsample.composeapp.generated.resources.*
@@ -53,6 +64,8 @@ fun ARScreen(
     onDragStart: (objectId: String, touchX: Float, touchY: Float) -> Unit = { _, _, _ -> },
     onDragUpdate: (newX: Float, newY: Float, newZ: Float, screenX: Float, screenY: Float, isOverTrash: Boolean) -> Unit = { _, _, _, _, _, _ -> },
     onDragEnd: () -> Unit = {},
+    onToggleRecording: () -> Unit = {},
+    onClearRecordingState: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -288,6 +301,58 @@ fun ARScreen(
                 isHovered = isOverTrashZone,
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
+
+            // Video Recording Button
+            VideoRecordButton(
+                isRecording = uiState.isRecording,
+                onToggleRecording = onToggleRecording,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            )
+
+            // Recording Indicator (pulsing red dot)
+            if (uiState.isRecording) {
+                RecordingIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                )
+            }
+
+            // Recording state snackbar
+            val recordingState = uiState.recordingState
+            if (recordingState is RecordingState.Success || recordingState is RecordingState.Error) {
+                LaunchedEffect(recordingState) {
+                    kotlinx.coroutines.delay(3000)
+                    onClearRecordingState()
+                }
+                
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .padding(bottom = 80.dp),
+                    containerColor = when (recordingState) {
+                        is RecordingState.Success -> MaterialTheme.colorScheme.primaryContainer
+                        is RecordingState.Error -> MaterialTheme.colorScheme.errorContainer
+                        else -> MaterialTheme.colorScheme.surface
+                    }
+                ) {
+                    Text(
+                        text = when (recordingState) {
+                            is RecordingState.Success -> recordingState.message
+                            is RecordingState.Error -> recordingState.message
+                            else -> ""
+                        },
+                        color = when (recordingState) {
+                            is RecordingState.Success -> MaterialTheme.colorScheme.onPrimaryContainer
+                            is RecordingState.Error -> MaterialTheme.colorScheme.onErrorContainer
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+            }
 
         }
 
@@ -679,6 +744,86 @@ private fun PlacedObjectListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+/**
+ * Video recording button that toggles between start and stop states.
+ */
+@Composable
+fun VideoRecordButton(
+    isRecording: Boolean,
+    onToggleRecording: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FloatingActionButton(
+        onClick = onToggleRecording,
+        modifier = modifier.size(56.dp),
+        containerColor = if (isRecording) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
+        contentColor = if (isRecording) {
+            MaterialTheme.colorScheme.onError
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        }
+    ) {
+        Icon(
+            imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
+            contentDescription = if (isRecording) "Stop recording" else "Start recording",
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+/**
+ * Recording indicator - pulsing red dot shown when recording is active.
+ */
+@Composable
+fun RecordingIndicator(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "recording_pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
+        tonalElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Pulsing red dot
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .alpha(alpha)
+                    .background(
+                        color = Color.Red,
+                        shape = CircleShape
+                    )
+            )
+            Text(
+                text = "REC",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
         }
     }
 }

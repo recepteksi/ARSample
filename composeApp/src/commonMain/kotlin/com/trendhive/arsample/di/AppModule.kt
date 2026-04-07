@@ -16,6 +16,7 @@ import com.trendhive.arsample.application.usecase.RemoveObjectFromSceneUseCase
 import com.trendhive.arsample.application.usecase.GetSceneUseCase
 import com.trendhive.arsample.application.usecase.SaveSceneUseCase
 import com.trendhive.arsample.application.usecase.MoveObjectUseCase
+import com.trendhive.arsample.application.usecase.RecordVideoUseCase
 import com.trendhive.arsample.presentation.viewmodel.ObjectListViewModel
 import com.trendhive.arsample.presentation.viewmodel.ARViewModel
 import org.koin.dsl.module
@@ -56,6 +57,7 @@ val applicationModule = module {
     
     // Media use cases
     factory { CapturePhotoUseCase(get()) }
+    factory { RecordVideoUseCase(get()) }
 }
 
 /**
@@ -63,7 +65,7 @@ val applicationModule = module {
  */
 val presentationModule = module {
     factory { ObjectListViewModel(get(), get(), get()) }
-    factory { ARViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    factory { ARViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
 }
 
 /**

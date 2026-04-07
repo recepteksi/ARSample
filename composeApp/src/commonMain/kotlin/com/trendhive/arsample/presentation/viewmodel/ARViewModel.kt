@@ -11,6 +11,7 @@ import com.trendhive.arsample.domain.model.currentTimeMillis
 import com.trendhive.arsample.application.usecase.CapturePhotoUseCase
 import com.trendhive.arsample.application.usecase.MoveObjectUseCase
 import com.trendhive.arsample.application.usecase.PlaceObjectInSceneUseCase
+import com.trendhive.arsample.application.usecase.RecordVideoUseCase
 import com.trendhive.arsample.application.usecase.RemoveObjectFromSceneUseCase
 import com.trendhive.arsample.application.usecase.GetSceneUseCase
 import com.trendhive.arsample.application.usecase.SaveSceneUseCase
@@ -33,6 +34,17 @@ sealed class CaptureState {
     data class Error(val message: String) : CaptureState()
 }
 
+/**
+ * Sealed class representing video recording states.
+ */
+sealed class RecordingState {
+    object Idle : RecordingState()
+    object Recording : RecordingState()
+    object Stopping : RecordingState()
+    data class Success(val message: String) : RecordingState()
+    data class Error(val message: String) : RecordingState()
+}
+
 data class ARUiState(
     val currentScene: ARScene? = null,
     val placedObjects: List<PlacedObject> = emptyList(),
@@ -42,7 +54,9 @@ data class ARUiState(
     val dragState: DragState = DragState.Idle,
     val trashZoneState: TrashZoneState = TrashZoneState.Hidden,
     val captureState: CaptureState = CaptureState.Idle,
-    val captureRequest: Boolean = false
+    val captureRequest: Boolean = false,
+    val recordingState: RecordingState = RecordingState.Idle,
+    val isRecording: Boolean = false
 )
 
 class ARViewModel(
@@ -52,7 +66,8 @@ class ARViewModel(
     private val saveSceneUseCase: SaveSceneUseCase,
     private val sceneRepository: ARSceneRepository,
     private val moveObjectUseCase: MoveObjectUseCase,
-    private val capturePhotoUseCase: CapturePhotoUseCase? = null
+    private val capturePhotoUseCase: CapturePhotoUseCase? = null,
+    private val recordVideoUseCase: RecordVideoUseCase? = null
 ) : androidx.lifecycle.ViewModel() {
 
     companion object {
@@ -350,5 +365,86 @@ class ARViewModel(
      */
     fun clearCaptureState() {
         _uiState.value = _uiState.value.copy(captureState = CaptureState.Idle)
+    }
+
+    // ==================== Video Recording Operations ====================
+
+    /**
+     * Start video recording.
+     */
+    fun startRecording() {
+        if (recordVideoUseCase == null) {
+            _uiState.value = _uiState.value.copy(
+                recordingState = RecordingState.Error("Video recording not available")
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            recordVideoUseCase.startRecording().fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.Recording,
+                        isRecording = true
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.Error(e.message ?: "Failed to start recording"),
+                        isRecording = false
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Stop video recording.
+     */
+    fun stopRecording() {
+        if (recordVideoUseCase == null) {
+            _uiState.value = _uiState.value.copy(
+                recordingState = RecordingState.Error("Video recording not available"),
+                isRecording = false
+            )
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(recordingState = RecordingState.Stopping)
+
+        viewModelScope.launch {
+            recordVideoUseCase.stopRecording().fold(
+                onSuccess = { video ->
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.Success("Video saved (${video.durationMs / 1000}s)"),
+                        isRecording = false
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.Error(e.message ?: "Failed to save video"),
+                        isRecording = false
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Toggle video recording state.
+     */
+    fun toggleRecording() {
+        if (_uiState.value.isRecording) {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    /**
+     * Clear the recording state (dismiss toast/snackbar).
+     */
+    fun clearRecordingState() {
+        _uiState.value = _uiState.value.copy(recordingState = RecordingState.Idle)
     }
 }

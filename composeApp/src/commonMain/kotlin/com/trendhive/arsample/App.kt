@@ -85,6 +85,12 @@ fun App() {
                         },
                         onDragEnd = {
                             arViewModel.onDragEnd()
+                        },
+                        onToggleRecording = {
+                            arViewModel.toggleRecording()
+                        },
+                        onClearRecordingState = {
+                            arViewModel.clearRecordingState()
                         }
                     )
                 }
