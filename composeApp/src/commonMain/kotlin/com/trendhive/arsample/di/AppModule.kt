@@ -74,7 +74,18 @@ val applicationModule = module {
  */
 val presentationModule = module {
     factory { ObjectListViewModel(get(), get(), get()) }
-    factory { ARViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { 
+        ARViewModel(
+            placeObjectUseCase = get(),
+            removeObjectUseCase = get(),
+            getSceneUseCase = get(),
+            saveSceneUseCase = get(),
+            sceneRepository = get(),
+            moveObjectUseCase = get(),
+            capturePhotoUseCase = get(),
+            recordVideoUseCase = get()
+        ) 
+    }
     factory { GalleryViewModel(get(), get(), get(), get()) }
 }
 
