@@ -17,8 +17,12 @@ actual fun PlatformARView(
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
     onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
     captureRequest: Boolean,
-    onCaptureComplete: ((ByteArray?) -> Unit)?
+    onCaptureComplete: ((ByteArray?) -> Unit)?,
+    onRecordingCallbacksReady: ((onStart: (String) -> Boolean, onStop: () -> Boolean) -> Unit)?,
+    onRecordingCallbacksClear: (() -> Unit)?
 ) {
+    // Note: Video recording not yet implemented for iOS
+    // The callbacks are ignored for now
     ARViewWrapper(
         modifier = modifier,
         placedObjects = placedObjects,

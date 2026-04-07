@@ -40,8 +40,11 @@ import com.trendhive.arsample.ar.PlatformARView
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.presentation.ui.components.ArrowBackIcon
+import com.trendhive.arsample.presentation.ui.components.CameraControlsBar
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
 import com.trendhive.arsample.presentation.ui.components.MenuIcon
+import com.trendhive.arsample.presentation.ui.components.RecordingBorderGlow
+import com.trendhive.arsample.presentation.ui.components.RecordingTimerDisplay
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ARUiState
 import com.trendhive.arsample.presentation.viewmodel.RecordingState
@@ -66,6 +69,8 @@ fun ARScreen(
     onDragEnd: () -> Unit = {},
     onToggleRecording: () -> Unit = {},
     onClearRecordingState: () -> Unit = {},
+    onCapturePhoto: () -> Unit = {},
+    onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -302,23 +307,33 @@ fun ARScreen(
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
 
-            // Video Recording Button
-            VideoRecordButton(
-                isRecording = uiState.isRecording,
-                onToggleRecording = onToggleRecording,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-            )
+            // Recording border glow effect
+            RecordingBorderGlow(isRecording = uiState.isRecording)
 
-            // Recording Indicator (pulsing red dot)
-            if (uiState.isRecording) {
-                RecordingIndicator(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
+            // Recording Timer Display (top center when recording)
+            AnimatedVisibility(
+                visible = uiState.isRecording,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(300)),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+            ) {
+                RecordingTimerDisplay(
+                    durationSeconds = uiState.recordingDurationSeconds
                 )
             }
+
+            // Camera Controls Bar (bottom)
+            CameraControlsBar(
+                isRecording = uiState.isRecording,
+                onCapturePhoto = onCapturePhoto,
+                onToggleRecording = onToggleRecording,
+                onOpenGallery = onOpenGallery,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            )
 
             // Recording state snackbar
             val recordingState = uiState.recordingState
@@ -332,7 +347,7 @@ fun ARScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
-                        .padding(bottom = 80.dp),
+                        .padding(bottom = 120.dp),
                     containerColor = when (recordingState) {
                         is RecordingState.Success -> MaterialTheme.colorScheme.primaryContainer
                         is RecordingState.Error -> MaterialTheme.colorScheme.errorContainer

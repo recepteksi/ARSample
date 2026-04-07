@@ -38,7 +38,9 @@ actual fun PlatformARView(
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
     onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
     captureRequest: Boolean,
-    onCaptureComplete: ((ByteArray?) -> Unit)?
+    onCaptureComplete: ((ByteArray?) -> Unit)?,
+    onRecordingCallbacksReady: ((onStart: (String) -> Boolean, onStop: () -> Boolean) -> Unit)?,
+    onRecordingCallbacksClear: (() -> Unit)?
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -123,7 +125,9 @@ actual fun PlatformARView(
                 onDragMove = onDragMove,
                 onDragEnd = onDragEnd,
                 captureRequest = captureRequest,
-                onCaptureComplete = onCaptureComplete
+                onCaptureComplete = onCaptureComplete,
+                onRecordingCallbacksReady = onRecordingCallbacksReady,
+                onRecordingCallbacksClear = onRecordingCallbacksClear
             )
         }
         else -> {

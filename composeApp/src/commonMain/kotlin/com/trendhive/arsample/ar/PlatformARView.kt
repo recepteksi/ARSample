@@ -17,5 +17,8 @@ expect fun PlatformARView(
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
     onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
     captureRequest: Boolean = false,
-    onCaptureComplete: ((ByteArray?) -> Unit)? = null
+    onCaptureComplete: ((ByteArray?) -> Unit)? = null,
+    // Video recording callbacks - set by MediaRepository to enable recording
+    onRecordingCallbacksReady: ((onStart: (String) -> Boolean, onStop: () -> Boolean) -> Unit)? = null,
+    onRecordingCallbacksClear: (() -> Unit)? = null
 )

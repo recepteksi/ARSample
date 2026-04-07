@@ -21,7 +21,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -56,7 +59,8 @@ data class ARUiState(
     val captureState: CaptureState = CaptureState.Idle,
     val captureRequest: Boolean = false,
     val recordingState: RecordingState = RecordingState.Idle,
-    val isRecording: Boolean = false
+    val isRecording: Boolean = false,
+    val recordingDurationSeconds: Long = 0L
 )
 
 class ARViewModel(
@@ -79,6 +83,9 @@ class ARViewModel(
     val uiState: StateFlow<ARUiState> = _uiState.asStateFlow()
 
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // Timer job for recording duration
+    private var recordingTimerJob: Job? = null
 
     init {
         loadScene()
@@ -370,6 +377,31 @@ class ARViewModel(
     // ==================== Video Recording Operations ====================
 
     /**
+     * Start the recording duration timer.
+     * Updates recordingDurationSeconds every second.
+     */
+    private fun startRecordingTimer() {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = viewModelScope.launch {
+            var seconds = 0L
+            while (isActive) {
+                _uiState.value = _uiState.value.copy(recordingDurationSeconds = seconds)
+                delay(1000)
+                seconds++
+            }
+        }
+    }
+
+    /**
+     * Stop the recording duration timer.
+     */
+    private fun stopRecordingTimer() {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        _uiState.value = _uiState.value.copy(recordingDurationSeconds = 0L)
+    }
+
+    /**
      * Start video recording.
      */
     fun startRecording() {
@@ -387,6 +419,7 @@ class ARViewModel(
                         recordingState = RecordingState.Recording,
                         isRecording = true
                     )
+                    startRecordingTimer()
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
@@ -410,6 +443,7 @@ class ARViewModel(
             return
         }
 
+        stopRecordingTimer()
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.Stopping)
 
         viewModelScope.launch {

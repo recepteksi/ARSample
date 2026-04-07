@@ -72,7 +72,10 @@ fun ARView(
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
     onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
     captureRequest: Boolean = false,
-    onCaptureComplete: ((ByteArray?) -> Unit)? = null
+    onCaptureComplete: ((ByteArray?) -> Unit)? = null,
+    // Video recording callbacks - set by MediaRepository to enable recording
+    onRecordingCallbacksReady: ((onStart: (String) -> Boolean, onStop: () -> Boolean) -> Unit)? = null,
+    onRecordingCallbacksClear: (() -> Unit)? = null
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
     // This prevents AndroidView factory closure from capturing stale lambda references
@@ -84,10 +87,16 @@ fun ARView(
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
     val currentOnCaptureComplete by rememberUpdatedState(onCaptureComplete)
+    val currentOnRecordingCallbacksReady by rememberUpdatedState(onRecordingCallbacksReady)
+    val currentOnRecordingCallbacksClear by rememberUpdatedState(onRecordingCallbacksClear)
     
     val coroutineScope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
+    
+    // Video recorder instance
+    val videoRecorder = remember { VideoRecorder(context) }
     val currentNodes = remember { mutableMapOf<String, ModelNode>() }
 
     // Long-press placement state
@@ -457,6 +466,39 @@ fun ARView(
     DisposableEffect(Unit) {
         onDispose {
             arSceneView?.destroy()
+        }
+    }
+    
+    // Setup video recording callbacks when ARSceneView is ready
+    DisposableEffect(arSceneView) {
+        val view = arSceneView
+        if (view != null) {
+            // Set ARSceneView in video recorder
+            videoRecorder.setARSceneView(view)
+            
+            // Register recording callbacks with MediaRepository
+            currentOnRecordingCallbacksReady?.invoke(
+                // onStart callback - called when startVideoRecording is invoked
+                { outputPath ->
+                    Log.d(TAG, "Starting video recording to: $outputPath")
+                    videoRecorder.startRecording(outputPath)
+                },
+                // onStop callback - called when stopVideoRecording is invoked
+                {
+                    Log.d(TAG, "Stopping video recording")
+                    videoRecorder.stopRecording()
+                }
+            )
+        }
+        
+        onDispose {
+            // Stop any ongoing recording
+            if (videoRecorder.isRecording()) {
+                videoRecorder.stopRecording()
+            }
+            // Clear recording callbacks
+            currentOnRecordingCallbacksClear?.invoke()
+            videoRecorder.setARSceneView(null)
         }
     }
     
