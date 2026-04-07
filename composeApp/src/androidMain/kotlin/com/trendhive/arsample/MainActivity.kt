@@ -9,7 +9,8 @@ import com.trendhive.arsample.di.appModules
 import com.trendhive.arsample.di.platformDataSourceModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
-import org.koin.core.context.GlobalContext.startKoin
+import org.koin.core.context.GlobalContext
+import org.koin.core.context.startKoin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,11 +20,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // Initialize Koin DI
-        startKoin {
-            androidLogger()
-            androidContext(applicationContext)
-            modules(platformDataSourceModule() + appModules)
+        // Initialize Koin DI only if not already started
+        // This prevents crash on Activity recreation (e.g., configuration change)
+        if (GlobalContext.getOrNull() == null) {
+            startKoin {
+                androidLogger()
+                androidContext(applicationContext)
+                modules(platformDataSourceModule() + appModules)
+            }
         }
 
         setContent {
