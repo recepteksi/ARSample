@@ -31,6 +31,7 @@ import com.trendhive.arsample.presentation.ui.components.AddIcon
 import com.trendhive.arsample.presentation.ui.components.ArrowBackIcon
 import com.trendhive.arsample.presentation.ui.components.DeleteIcon
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
+import com.trendhive.arsample.presentation.ui.components.ModelPreviewThumbnail
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ObjectListUiState
 import org.jetbrains.compose.resources.stringResource
@@ -269,20 +270,17 @@ fun ObjectGalleryCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Preview area (2/3 of card)
+                // Preview area (2/3 of card) - 3D model preview
                 Box(
                     modifier = Modifier
                         .weight(2f)
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Large preview icon
-                    Icon(
-                        imageVector = Icons.Default.ViewInAr,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    ModelPreviewThumbnail(
+                        modelPath = arObject.modelUri,
+                        modifier = Modifier.fillMaxSize(),
+                        autoRotate = true
                     )
                 }
 

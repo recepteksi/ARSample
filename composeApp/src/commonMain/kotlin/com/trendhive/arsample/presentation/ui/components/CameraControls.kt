@@ -139,7 +139,7 @@ fun RecordingTimerDisplay(
     val hours = durationSeconds / 3600
     val minutes = (durationSeconds % 3600) / 60
     val seconds = durationSeconds % 60
-    val timeString = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    val timeString = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
     
     Surface(
         modifier = modifier,

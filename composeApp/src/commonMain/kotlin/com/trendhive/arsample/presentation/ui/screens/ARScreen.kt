@@ -617,8 +617,9 @@ private fun ObjectListItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Thumbnail or icon based on model type
+            // 3D model preview thumbnail
             ObjectThumbnail(
+                modelUri = arObject.modelUri,
                 thumbnailUri = arObject.thumbnailUri,
                 modelType = arObject.modelType,
                 isSelected = isSelected,
@@ -649,11 +650,12 @@ private fun ObjectListItem(
 
 /**
  * Displays a thumbnail for a 3D object.
- * Shows a custom thumbnail image if available, otherwise displays
- * a model-type specific icon.
+ * Shows a 3D model preview when modelUri is available,
+ * otherwise displays a placeholder icon.
  */
 @Composable
 private fun ObjectThumbnail(
+    modelUri: String,
     thumbnailUri: String?,
     modelType: com.trendhive.arsample.domain.model.ModelType,
     isSelected: Boolean,
@@ -665,24 +667,16 @@ private fun ObjectThumbnail(
         MaterialTheme.colorScheme.surfaceVariant
     }
     
-    val iconTint = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    
     Box(
         modifier = modifier
             .background(backgroundColor, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // For now, use placeholder icons based on model type
-        // TODO: When thumbnailUri is available, load actual thumbnail image
-        Icon(
-            imageVector = Icons.Default.ViewInAr,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = iconTint
+        // Use 3D model preview for interactive thumbnail
+        com.trendhive.arsample.presentation.ui.components.ModelPreviewThumbnail(
+            modelPath = modelUri,
+            modifier = Modifier.fillMaxSize(),
+            autoRotate = true
         )
     }
 }
