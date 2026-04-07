@@ -70,7 +70,9 @@ fun ARView(
     onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null,
     onDragStart: ((objectId: String) -> Unit)? = null,
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
-    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
+    captureRequest: Boolean = false,
+    onCaptureComplete: ((ByteArray?) -> Unit)? = null
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always reference latest values
     // This prevents AndroidView factory closure from capturing stale lambda references
@@ -81,6 +83,7 @@ fun ARView(
     val currentOnDragMove by rememberUpdatedState(onDragMove)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val currentModelPath by rememberUpdatedState(modelPathToLoad)
+    val currentOnCaptureComplete by rememberUpdatedState(onCaptureComplete)
     
     val coroutineScope = rememberCoroutineScope()
 
@@ -454,6 +457,51 @@ fun ARView(
     DisposableEffect(Unit) {
         onDispose {
             arSceneView?.destroy()
+        }
+    }
+    
+    // Handle capture request
+    LaunchedEffect(captureRequest) {
+        val callback = currentOnCaptureComplete
+        if (captureRequest && callback != null) {
+            val view = arSceneView
+            if (view == null) {
+                callback(null)
+                return@LaunchedEffect
+            }
+            
+            try {
+                // Create bitmap from ARSceneView using PixelCopy
+                val bitmap = android.graphics.Bitmap.createBitmap(
+                    view.width,
+                    view.height,
+                    android.graphics.Bitmap.Config.ARGB_8888
+                )
+                
+                // Use PixelCopy for hardware-accelerated capture
+                android.view.PixelCopy.request(
+                    view,
+                    bitmap,
+                    { result ->
+                        if (result == android.view.PixelCopy.SUCCESS) {
+                            // Convert bitmap to JPEG byte array
+                            val stream = java.io.ByteArrayOutputStream()
+                            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, stream)
+                            val byteArray = stream.toByteArray()
+                            Log.d(TAG, "Captured photo: ${byteArray.size} bytes, ${bitmap.width}x${bitmap.height}")
+                            callback(byteArray)
+                        } else {
+                            Log.e(TAG, "PixelCopy failed with result: $result")
+                            callback(null)
+                        }
+                        bitmap.recycle()
+                    },
+                    android.os.Handler(android.os.Looper.getMainLooper())
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Capture failed: ${e.message}", e)
+                callback(null)
+            }
         }
     }
 

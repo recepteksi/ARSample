@@ -2,10 +2,12 @@ package com.trendhive.arsample.di
 
 import com.trendhive.arsample.domain.repository.ARObjectRepository
 import com.trendhive.arsample.domain.repository.ARSceneRepository
+import com.trendhive.arsample.domain.repository.MediaRepository
 import com.trendhive.arsample.infrastructure.persistence.repository.ARObjectRepositoryImpl
 import com.trendhive.arsample.infrastructure.persistence.repository.ARSceneRepositoryImpl
 import com.trendhive.arsample.infrastructure.persistence.mapper.ARObjectMapper
 import com.trendhive.arsample.infrastructure.persistence.mapper.ARSceneMapper
+import com.trendhive.arsample.application.usecase.CapturePhotoUseCase
 import com.trendhive.arsample.application.usecase.ImportObjectUseCase
 import com.trendhive.arsample.application.usecase.GetAllObjectsUseCase
 import com.trendhive.arsample.application.usecase.DeleteObjectUseCase
@@ -33,6 +35,7 @@ val dataModule = module {
     single<ARSceneRepository> { 
         ARSceneRepositoryImpl(get()) 
     }
+    // Note: MediaRepository is provided by platformModule (platform-specific implementation)
 }
 
 /**
@@ -50,6 +53,9 @@ val applicationModule = module {
     factory { GetSceneUseCase(get()) }
     factory { SaveSceneUseCase(get()) }
     factory { MoveObjectUseCase(get()) }
+    
+    // Media use cases
+    factory { CapturePhotoUseCase(get()) }
 }
 
 /**
@@ -57,7 +63,7 @@ val applicationModule = module {
  */
 val presentationModule = module {
     factory { ObjectListViewModel(get(), get(), get()) }
-    factory { ARViewModel(get(), get(), get(), get(), get(), get()) }
+    factory { ARViewModel(get(), get(), get(), get(), get(), get(), get()) }
 }
 
 /**

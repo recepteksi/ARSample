@@ -27,7 +27,9 @@ fun ARViewWrapper(
     onModelPlaced: (modelPath: String, posX: Float, posY: Float, posZ: Float, scale: Float) -> Unit,
     onModelRemoved: (anchorId: String) -> Unit = {},
     modelPathToLoad: String? = null,
-    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> }
+    onObjectScaleChanged: (objectId: String, newScale: Float) -> Unit = { _, _ -> },
+    captureRequest: Boolean = false,
+    onCaptureComplete: ((ByteArray?) -> Unit)? = null
 ) {
     var arView by remember { mutableStateOf<ARSCNView?>(null) }
     
@@ -97,6 +99,57 @@ fun ARViewWrapper(
                 arView?.session?.pause()
             } catch (e: Exception) {
                 println("$TAG: WARNING - Error during cleanup: ${e.message}")
+            }
+        }
+    }
+    
+    // Handle capture request
+    LaunchedEffect(captureRequest) {
+        if (captureRequest && onCaptureComplete != null) {
+            val view = arView
+            if (view == null) {
+                onCaptureComplete(null)
+                return@LaunchedEffect
+            }
+            
+            try {
+                // Capture snapshot of the AR view
+                val snapshot = view.snapshot()
+                if (snapshot == null) {
+                    println("$TAG: Snapshot returned null")
+                    onCaptureComplete(null)
+                    return@LaunchedEffect
+                }
+                
+                // Convert UIImage to JPEG data
+                val jpegData = platform.UIKit.UIImageJPEGRepresentation(snapshot, 0.9)
+                if (jpegData == null) {
+                    println("$TAG: JPEG conversion returned null")
+                    onCaptureComplete(null)
+                    return@LaunchedEffect
+                }
+                
+                // Convert NSData to ByteArray
+                val bytes = jpegData.bytes
+                val length = jpegData.length.toInt()
+                if (bytes == null || length == 0) {
+                    onCaptureComplete(null)
+                    return@LaunchedEffect
+                }
+                
+                val byteArray = ByteArray(length)
+                kotlinx.cinterop.memScoped {
+                    val ptr = bytes.reinterpret<kotlinx.cinterop.ByteVar>()
+                    for (i in 0 until length) {
+                        byteArray[i] = ptr[i]
+                    }
+                }
+                
+                println("$TAG: Captured photo with ${byteArray.size} bytes")
+                onCaptureComplete(byteArray)
+            } catch (e: Exception) {
+                println("$TAG: ERROR - Capture failed: ${e.message}")
+                onCaptureComplete(null)
             }
         }
     }

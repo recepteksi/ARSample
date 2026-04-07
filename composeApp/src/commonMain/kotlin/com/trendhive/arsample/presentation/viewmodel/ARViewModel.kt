@@ -8,6 +8,7 @@ import com.trendhive.arsample.domain.model.ScreenPosition
 import com.trendhive.arsample.domain.model.TrashZoneState
 import com.trendhive.arsample.domain.model.Vector3
 import com.trendhive.arsample.domain.model.currentTimeMillis
+import com.trendhive.arsample.application.usecase.CapturePhotoUseCase
 import com.trendhive.arsample.application.usecase.MoveObjectUseCase
 import com.trendhive.arsample.application.usecase.PlaceObjectInSceneUseCase
 import com.trendhive.arsample.application.usecase.RemoveObjectFromSceneUseCase
@@ -22,6 +23,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+/**
+ * Sealed class representing photo capture states.
+ */
+sealed class CaptureState {
+    object Idle : CaptureState()
+    object Capturing : CaptureState()
+    data class Success(val message: String) : CaptureState()
+    data class Error(val message: String) : CaptureState()
+}
+
 data class ARUiState(
     val currentScene: ARScene? = null,
     val placedObjects: List<PlacedObject> = emptyList(),
@@ -29,7 +40,9 @@ data class ARUiState(
     val error: String? = null,
     val selectedObjectId: String? = null,
     val dragState: DragState = DragState.Idle,
-    val trashZoneState: TrashZoneState = TrashZoneState.Hidden
+    val trashZoneState: TrashZoneState = TrashZoneState.Hidden,
+    val captureState: CaptureState = CaptureState.Idle,
+    val captureRequest: Boolean = false
 )
 
 class ARViewModel(
@@ -38,7 +51,8 @@ class ARViewModel(
     private val getSceneUseCase: GetSceneUseCase,
     private val saveSceneUseCase: SaveSceneUseCase,
     private val sceneRepository: ARSceneRepository,
-    private val moveObjectUseCase: MoveObjectUseCase
+    private val moveObjectUseCase: MoveObjectUseCase,
+    private val capturePhotoUseCase: CapturePhotoUseCase? = null
 ) : androidx.lifecycle.ViewModel() {
 
     companion object {
@@ -271,5 +285,70 @@ class ARViewModel(
                 }
             )
         }
+    }
+
+    // ==================== Photo Capture Operations ====================
+
+    /**
+     * Request a photo capture from the AR view.
+     * This triggers the capture flow in PlatformARView.
+     */
+    fun requestCapture() {
+        if (capturePhotoUseCase == null) {
+            _uiState.value = _uiState.value.copy(
+                captureState = CaptureState.Error("Photo capture not available")
+            )
+            return
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            captureState = CaptureState.Capturing,
+            captureRequest = true
+        )
+    }
+
+    /**
+     * Handle the captured photo data from the AR view.
+     * Called by the UI when PixelCopy/snapshot completes.
+     */
+    fun onPhotoCaptured(imageData: ByteArray?) {
+        // Reset capture request
+        _uiState.value = _uiState.value.copy(captureRequest = false)
+        
+        if (imageData == null) {
+            _uiState.value = _uiState.value.copy(
+                captureState = CaptureState.Error("Failed to capture photo")
+            )
+            return
+        }
+        
+        if (capturePhotoUseCase == null) {
+            _uiState.value = _uiState.value.copy(
+                captureState = CaptureState.Error("Photo capture not available")
+            )
+            return
+        }
+        
+        viewModelScope.launch {
+            capturePhotoUseCase.invoke(imageData).fold(
+                onSuccess = { photo ->
+                    _uiState.value = _uiState.value.copy(
+                        captureState = CaptureState.Success("Photo saved")
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        captureState = CaptureState.Error(e.message ?: "Failed to save photo")
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Clear the capture state (dismiss toast/snackbar).
+     */
+    fun clearCaptureState() {
+        _uiState.value = _uiState.value.copy(captureState = CaptureState.Idle)
     }
 }

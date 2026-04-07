@@ -15,5 +15,7 @@ expect fun PlatformARView(
     onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)? = null,
     onDragStart: ((objectId: String) -> Unit)? = null,
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
-    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)? = null,
+    captureRequest: Boolean = false,
+    onCaptureComplete: ((ByteArray?) -> Unit)? = null
 )
