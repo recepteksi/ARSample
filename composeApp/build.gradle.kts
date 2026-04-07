@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -89,5 +90,44 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+}
+
+koverReport {
+    defaults {
+        html {
+            onCheck = true
+        }
+        xml {
+            onCheck = true
+        }
+    }
+    
+    filters {
+        excludes {
+            // Exclude generated code
+            classes("*_Factory", "*_HiltModules*", "Hilt_*", "*BuildConfig")
+            // Exclude Android framework classes
+            packages("*.di", "*.ui.theme")
+            // Exclude Compose generated
+            annotatedBy("androidx.compose.runtime.Composable")
+        }
+    }
+    
+    verify {
+        rule {
+            isEnabled = true
+            // Domain layer should have high coverage
+            filters {
+                includes {
+                    packages("com.trendhive.arsample.domain.*")
+                    packages("com.trendhive.arsample.application.*")
+                }
+            }
+            bound {
+                minValue = 80
+                metric = kotlinx.kover.gradle.plugin.dsl.MetricType.LINE
+            }
+        }
+    }
 }
 
