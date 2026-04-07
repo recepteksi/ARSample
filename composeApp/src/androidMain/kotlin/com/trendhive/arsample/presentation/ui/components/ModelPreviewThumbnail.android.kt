@@ -23,33 +23,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.google.android.filament.Engine
-import com.google.android.filament.utils.HDRLoader
 import io.github.sceneview.Scene
-import io.github.sceneview.SceneView
-import io.github.sceneview.environment.Environment
-import io.github.sceneview.loaders.EnvironmentLoader
-import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelLoader
-import io.github.sceneview.rememberNode
-import io.github.sceneview.rememberNodes
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -147,12 +134,8 @@ private fun ModelPreviewSceneView(
     onError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val environmentLoader = rememberEnvironmentLoader(engine)
     
     // Camera positioned to view the model
     val cameraNode = rememberCameraNode(engine) {
@@ -171,24 +154,29 @@ private fun ModelPreviewSceneView(
     // Load model
     LaunchedEffect(modelPath) {
         try {
-            val node = withContext(Dispatchers.IO) {
-                val file = File(modelPath)
-                if (!file.exists()) {
-                    Log.w(TAG, "Model file does not exist: $modelPath")
+            val file = File(modelPath)
+            if (!file.exists()) {
+                Log.w(TAG, "Model file does not exist: $modelPath")
+                onError()
+                return@LaunchedEffect
+            }
+            
+            val instance = withContext(Dispatchers.IO) {
+                try {
+                    modelLoader.createModelInstance(modelPath)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create model instance: $modelPath", e)
                     null
-                } else {
-                    modelLoader.createModelInstance(modelPath)?.let { instance ->
-                        ModelNode(
-                            modelInstance = instance,
-                            scaleToUnits = 0.5f // Scale to fit preview
-                        ).apply {
-                            position = Position(0f, 0f, 0f)
-                        }
-                    }
                 }
             }
             
-            if (node != null) {
+            if (instance != null) {
+                val node = ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.5f
+                ).apply {
+                    position = Position(0f, 0f, 0f)
+                }
                 modelNodeState = node
                 onModelLoaded(node)
             } else {
@@ -217,9 +205,6 @@ private fun ModelPreviewSceneView(
         engine = engine,
         modelLoader = modelLoader,
         cameraNode = cameraNode,
-        childNodes = childNodes,
-        environment = environmentLoader.createHDREnvironment(
-            assetFileLocation = "environments/studio_small_09_2k.hdr"
-        ) ?: Environment()
+        childNodes = childNodes
     )
 }
