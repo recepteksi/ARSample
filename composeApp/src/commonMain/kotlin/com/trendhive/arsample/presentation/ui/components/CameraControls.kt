@@ -208,7 +208,7 @@ fun CameraControlButton(
 
 /**
  * Complete camera controls bar with photo capture, record button, and gallery access.
- * Clean centered layout with symmetrical spacing.
+ * Professional camera-style layout with perfect symmetry.
  */
 @Composable
 fun CameraControlsBar(
@@ -216,82 +216,56 @@ fun CameraControlsBar(
     onCapturePhoto: () -> Unit,
     onToggleRecording: () -> Unit,
     onOpenGallery: () -> Unit,
-    onSwitchCamera: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Semi-transparent background for better visibility
-        Surface(
-            modifier = Modifier
-                .wrapContentSize(),
-            shape = RoundedCornerShape(40.dp),
-            color = Color.Black.copy(alpha = 0.5f)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Gallery button (left)
+            CameraControlButton(
+                onClick = onOpenGallery,
+                enabled = !isRecording,
+                modifier = Modifier.size(56.dp)
             ) {
-                // Gallery button
-                CameraControlButton(
-                    onClick = onOpenGallery,
-                    enabled = !isRecording,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Collections,
-                        contentDescription = "Open Gallery",
-                        tint = if (isRecording) Color.Gray else Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                // Photo capture button
-                CameraControlButton(
-                    onClick = onCapturePhoto,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Capture Photo",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                // Main record button (center, larger)
-                CameraStyleRecordButton(
-                    isRecording = isRecording,
-                    onToggleRecording = onToggleRecording,
-                    modifier = Modifier.size(72.dp)
+                Icon(
+                    imageVector = Icons.Default.Collections,
+                    contentDescription = "Open Gallery",
+                    tint = if (isRecording) Color.Gray else Color.White,
+                    modifier = Modifier.size(28.dp)
                 )
-                
-                // Placeholder for symmetry (or switch camera if available)
-                if (onSwitchCamera != null) {
-                    CameraControlButton(
-                        onClick = onSwitchCamera,
-                        enabled = !isRecording,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FlipCameraAndroid,
-                            contentDescription = "Switch Camera",
-                            tint = if (isRecording) Color.Gray else Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.size(48.dp))
-                }
-                
-                // Empty spacer for symmetry
-                Spacer(modifier = Modifier.size(48.dp))
             }
+            
+            // Photo capture button (left of center)
+            CameraControlButton(
+                onClick = onCapturePhoto,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Capture Photo",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            // Main record button (center, larger)
+            CameraStyleRecordButton(
+                isRecording = isRecording,
+                onToggleRecording = onToggleRecording,
+                modifier = Modifier.size(80.dp)
+            )
+            
+            // Two spacers on right side for symmetry with left buttons
+            Box(modifier = Modifier.size(56.dp)) // Placeholder 1
+            Box(modifier = Modifier.size(56.dp)) // Placeholder 2
         }
     }
 }
