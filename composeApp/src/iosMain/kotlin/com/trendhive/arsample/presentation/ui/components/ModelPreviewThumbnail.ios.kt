@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,13 +19,29 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitView
-import kotlinx.cinterop.*
-import platform.CoreGraphics.*
-import platform.Foundation.*
-import platform.QuickLook.*
-import platform.SceneKit.*
-import platform.UIKit.*
-import platform.darwin.*
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSizeMake
+import platform.Foundation.NSURL
+import platform.QuickLook.QLThumbnailGenerator
+import platform.QuickLook.QLThumbnailGeneratorRequestRepresentationTypeThumbnail
+import platform.SceneKit.SCNAction
+import platform.SceneKit.SCNAntialiasingMode
+import platform.SceneKit.SCNCamera
+import platform.SceneKit.SCNNode
+import platform.SceneKit.SCNScene
+import platform.SceneKit.SCNVector3Make
+import platform.SceneKit.SCNView
+import platform.UIKit.UIColor
+import platform.UIKit.UIImage
+import platform.UIKit.UIImageView
+import platform.UIKit.UIScreen
+import platform.UIKit.UIView
+import platform.UIKit.UIViewAutoresizingFlexibleHeight
+import platform.UIKit.UIViewAutoresizingFlexibleWidth
+import platform.UIKit.UIViewContentMode
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 private const val TAG = "ModelPreviewThumbnail"
 
@@ -41,11 +61,10 @@ actual fun ModelPreviewThumbnail(
     modifier: Modifier,
     autoRotate: Boolean
 ) {
-    val extension = modelPath.substringAfterLast('.', "").lowercase()
-    when (extension) {
-        "usdz" -> USDZPreview(modelPath = modelPath, modifier = modifier, autoRotate = autoRotate)
-        "glb", "gltf" -> GLBThumbnailPreview(modelPath = modelPath, modifier = modifier)
-        else -> PlaceholderPreview(modifier = modifier)
+    when (ModelPreviewThumbnailHelper.resolvePreviewStrategy(modelPath)) {
+        PreviewStrategy.USDZ -> USDZPreview(modelPath = modelPath, modifier = modifier, autoRotate = autoRotate)
+        PreviewStrategy.GLB_THUMBNAIL -> GLBThumbnailPreview(modelPath = modelPath, modifier = modifier)
+        PreviewStrategy.PLACEHOLDER -> PlaceholderPreview(modifier = modifier)
     }
 }
 
@@ -122,6 +141,10 @@ private fun configureSceneView(scnView: SCNView, modelPath: String, autoRotate: 
 @Composable
 private fun GLBThumbnailPreview(modelPath: String, modifier: Modifier) {
     val imageViewRef = remember { mutableStateOf<UIImageView?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose { imageViewRef.value = null }
+    }
 
     LaunchedEffect(modelPath) {
         generateQLThumbnail(modelPath) { image ->

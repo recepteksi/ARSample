@@ -152,7 +152,8 @@ private fun ModelPreviewScene(
 
     LaunchedEffect(modelPath) {
         val file = File(modelPath)
-        if (!file.exists()) {
+        val initialState = ModelPreviewThumbnailHelper.resolveInitialAndroidState(file.exists())
+        if (initialState == ThumbnailState.Error) {
             Log.w(TAG, "Model file does not exist: $modelPath")
             onError()
             return@LaunchedEffect
@@ -160,7 +161,11 @@ private fun ModelPreviewScene(
 
         try {
             val instance = modelLoader.createModelInstance(modelPath)
-            if (instance != null) {
+            val finalState = ModelPreviewThumbnailHelper.resolveAndroidStateAfterLoad(instance != null)
+            if (finalState == ThumbnailState.Error || instance == null) {
+                Log.e(TAG, "createModelInstance returned null for: $modelPath")
+                onError()
+            } else {
                 val node = ModelNode(
                     modelInstance = instance,
                     scaleToUnits = 0.5f
@@ -170,9 +175,6 @@ private fun ModelPreviewScene(
                 }
                 modelNodeState = node
                 onModelLoaded(node)
-            } else {
-                Log.e(TAG, "createModelInstance returned null for: $modelPath")
-                onError()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load model: $modelPath", e)
