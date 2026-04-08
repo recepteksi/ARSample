@@ -31,6 +31,7 @@ import com.trendhive.arsample.presentation.ui.components.AddIcon
 import com.trendhive.arsample.presentation.ui.components.ArrowBackIcon
 import com.trendhive.arsample.presentation.ui.components.DeleteIcon
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
+import com.trendhive.arsample.presentation.ui.components.ModelPreviewEngineProvider
 import com.trendhive.arsample.presentation.ui.components.ModelPreviewThumbnail
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ObjectListUiState
@@ -156,12 +157,18 @@ fun ObjectGalleryScreen(
                     )
                 }
                 else -> {
-                    ObjectGalleryGrid(
-                        objects = filteredObjects,
-                        onObjectClick = onObjectClick,
-                        onObjectDelete = onObjectDelete,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    // Wrap only the grid in ModelPreviewEngineProvider so all thumbnail
+                    // composables share a single Filament Engine instance. Narrowing scope
+                    // here avoids wrapping unrelated UI (dialogs, snackbars) and makes
+                    // engine lifecycle identical to the grid's lifecycle.
+                    ModelPreviewEngineProvider {
+                        ObjectGalleryGrid(
+                            objects = filteredObjects,
+                            onObjectClick = onObjectClick,
+                            onObjectDelete = onObjectDelete,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -251,7 +258,7 @@ private fun ObjectGalleryGrid(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ObjectGalleryCard(
+private fun ObjectGalleryCard(
     arObject: ARObject,
     onClick: () -> Unit,
     onDelete: () -> Unit,
