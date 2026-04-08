@@ -1,6 +1,6 @@
 # Agents
 
-Central documentation containing 6 agent definitions and task specifications.
+Central documentation containing 7 agent definitions and task specifications.
 
 ## 🔄 Development Workflow
 
@@ -25,8 +25,9 @@ Each agent follows this flow:
 | 2 | [Android Expert](./android-expert-agent.md) | ARCore research, Android report | Android report |
 | 3 | [iOS Expert](./ios-expert-agent.md) | ARKit research, iOS report | iOS report |
 | 4 | [Main Developer](./main-developer-agent.md) | Code development (domain, application, infrastructure, presentation) | Code files |
-| 5 | [Test Developer](./test-developer-agent.md) | Unit testing | Test files |
-| 6 | [Code Reviewer](./code-reviewer-agent.md) | Code standards verification | Review report |
+| 5 | [Bug Fixer](./bug-fixer-agent.md) | Debugging and bug fixing | Bug reports, fixed code |
+| 6 | [Test Developer](./test-developer-agent.md) | Unit testing | Test files |
+| 7 | [Code Reviewer](./code-reviewer-agent.md) | Code standards verification | Review report |
 
 ## Agent Communication Flow
 
@@ -70,5 +71,6 @@ Main Developer (fixes)
 2. [Android Expert Agent](./android-expert-agent.md) - Android ARCore implementation
 3. [iOS Expert Agent](./ios-expert-agent.md) - iOS ARKit implementation
 4. [Main Developer Agent](./main-developer-agent.md) - Core code development
-5. [Test Developer Agent](./test-developer-agent.md) - Unit tests
-6. [Code Reviewer Agent](./code-reviewer-agent.md) - Code quality control
+5. [Bug Fixer Agent](./bug-fixer-agent.md) - Debugging and bug fixing
+6. [Test Developer Agent](./test-developer-agent.md) - Unit tests
+7. [Code Reviewer Agent](./code-reviewer-agent.md) - Code quality control
