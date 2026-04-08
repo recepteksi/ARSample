@@ -25,15 +25,12 @@ fun App() {
         ) {
             var currentScreen by remember { mutableStateOf<Screen>(Screen.AR(null)) }
 
-            // Inject ViewModels via Koin
+            // Inject ViewModels via Koin (only inject when needed to avoid premature initialization)
             val objectListViewModel: ObjectListViewModel = koinInject()
             val objectListUiState by objectListViewModel.uiState.collectAsState()
             
             val arViewModel: ARViewModel = koinInject()
             val arUiState by arViewModel.uiState.collectAsState()
-            
-            val galleryViewModel: GalleryViewModel = koinInject()
-            val galleryUiState by galleryViewModel.uiState.collectAsState()
 
             when (val screen = currentScreen) {
                 is Screen.ObjectList -> {
@@ -68,6 +65,11 @@ fun App() {
                     )
                 }
                 is Screen.Gallery -> {
+                    // Lazy inject GalleryViewModel only when Gallery screen is shown
+                    // This prevents premature MediaRepository access before user navigates to Gallery
+                    val galleryViewModel: GalleryViewModel = koinInject()
+                    val galleryUiState by galleryViewModel.uiState.collectAsState()
+                    
                     GalleryScreen(
                         uiState = galleryUiState,
                         onNavigateBack = { currentScreen = Screen.AR(null) },
