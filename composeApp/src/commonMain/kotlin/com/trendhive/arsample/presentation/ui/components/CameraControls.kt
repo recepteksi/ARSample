@@ -20,18 +20,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Collections
-import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -208,7 +205,12 @@ fun CameraControlButton(
 
 /**
  * Complete camera controls bar with photo capture, record button, and gallery access.
- * Professional camera-style layout with perfect symmetry.
+ * Professional camera-style layout with perfect symmetry using weighted sections.
+ * 
+ * Layout: [Left Section] --- [Center Record] --- [Right Section]
+ * Left:  Gallery button (aligned to end)
+ * Center: Large record button (fixed size)
+ * Right: Photo capture button (aligned to start)
  */
 @Composable
 fun CameraControlsBar(
@@ -218,22 +220,23 @@ fun CameraControlsBar(
     onOpenGallery: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 32.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+        // Left section - Gallery button (aligned to end of this section)
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            // Gallery button (left)
             CameraControlButton(
                 onClick = onOpenGallery,
                 enabled = !isRecording,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier
+                    .padding(end = 24.dp)
+                    .size(56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Collections,
@@ -242,11 +245,25 @@ fun CameraControlsBar(
                     modifier = Modifier.size(28.dp)
                 )
             }
-            
-            // Photo capture button (left of center)
+        }
+        
+        // Center section - Main record button (fixed size, no weight)
+        CameraStyleRecordButton(
+            isRecording = isRecording,
+            onToggleRecording = onToggleRecording,
+            modifier = Modifier.size(80.dp)
+        )
+        
+        // Right section - Photo capture button (aligned to start of this section)
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterStart
+        ) {
             CameraControlButton(
                 onClick = onCapturePhoto,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier
+                    .padding(start = 24.dp)
+                    .size(56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
@@ -255,17 +272,6 @@ fun CameraControlsBar(
                     modifier = Modifier.size(28.dp)
                 )
             }
-            
-            // Main record button (center, larger)
-            CameraStyleRecordButton(
-                isRecording = isRecording,
-                onToggleRecording = onToggleRecording,
-                modifier = Modifier.size(80.dp)
-            )
-            
-            // Two spacers on right side for symmetry with left buttons
-            Box(modifier = Modifier.size(56.dp)) // Placeholder 1
-            Box(modifier = Modifier.size(56.dp)) // Placeholder 2
         }
     }
 }
