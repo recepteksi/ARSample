@@ -34,9 +34,7 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraNode
-import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMainLightNode
-import io.github.sceneview.rememberModelLoader
 import java.io.File
 
 private const val TAG = "ModelPreviewThumbnail"
@@ -44,19 +42,26 @@ private const val TAG = "ModelPreviewThumbnail"
 /**
  * Android implementation of 3D model preview thumbnail using SceneView.
  *
- * Previous crash root causes (fixed here):
+ * Crash root causes and fixes:
  *
- * 1. Model loading on wrong thread: createModelInstance() was dispatched to
- *    Dispatchers.IO. Filament's ResourceLoader finalise() must run on the main thread
- *    (the thread that owns the GL context). Fix: LaunchedEffect runs on Main by default.
+ * 1. Model loading on wrong thread: createModelInstance() must run on the main thread
+ *    (the GL context owner). Fix: LaunchedEffect dispatches on Main by default.
  *
- * 2. EGL context exhaustion: Each Scene composable creates a SurfaceView. Android
- *    devices have a ~16 simultaneous EGL surface limit. A LazyVerticalGrid with many
- *    visible cards exceeds this. Fix: key(modelPath) gives the runtime clear lifecycle
- *    boundaries so only visible items hold active surfaces.
+ * 2. EGL context exhaustion (PRIMARY CRASH CAUSE for LazyVerticalGrid):
+ *    Each Scene composable owns a SurfaceView with its own EGL surface. Android
+ *    enforces a system-wide limit (~16 simultaneous EGL surfaces). A LazyVerticalGrid
+ *    with multiple visible cards previously called rememberEngine() per cell, creating
+ *    one Filament Engine (and SurfaceView) per thumbnail simultaneously, exceeding
+ *    the limit and crashing the process.
  *
- * 3. Missing GPU resource cleanup: ModelNode.destroy() was not called when cells
- *    scrolled off-screen. Fix: DisposableEffect calls destroy() deterministically.
+ *    Fix: The Filament Engine and ModelLoader are no longer created per-cell.
+ *    Instead, they are provided by [ModelPreviewEngineProvider] (a single shared
+ *    instance at the gallery screen level via [LocalPreviewEngine]).
+ *    If no provider is found in the composition tree the thumbnail falls back to a
+ *    static placeholder icon — a safe degradation that never crashes.
+ *
+ * 3. Missing GPU resource cleanup: ModelNode.destroy() is called deterministically
+ *    in DisposableEffect when a cell scrolls off screen.
  */
 @Composable
 actual fun ModelPreviewThumbnail(
@@ -64,6 +69,19 @@ actual fun ModelPreviewThumbnail(
     modifier: Modifier,
     autoRotate: Boolean
 ) {
+    // Obtain the shared engine from the nearest ModelPreviewEngineProvider ancestor.
+    // If no provider is present in the tree, engineHolder is null and we show the
+    // placeholder icon instead of attempting to create a per-cell Engine (which crashed).
+    val engineHolder = LocalPreviewEngine.current
+
+    if (engineHolder == null) {
+        // Safe fallback: no engine provider wrapping this composable.
+        // Render a static icon instead of crashing.
+        Log.w(TAG, "No ModelPreviewEngineProvider found — showing placeholder for $modelPath")
+        ThumbnailPlaceholder(modifier = modifier)
+        return
+    }
+
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
     var modelNode by remember { mutableStateOf<ModelNode?>(null) }
@@ -112,6 +130,7 @@ actual fun ModelPreviewThumbnail(
             key(modelPath) {
                 ModelPreviewScene(
                     modelPath = modelPath,
+                    engineHolder = engineHolder,
                     rotationAngle = if (autoRotate) rotationAngle else 0f,
                     onModelLoaded = { node ->
                         modelNode = node
@@ -128,16 +147,46 @@ actual fun ModelPreviewThumbnail(
     }
 }
 
+/**
+ * Static icon placeholder shown when no [ModelPreviewEngineProvider] is found
+ * in the composition tree, or when the model fails to load.
+ */
+@Composable
+private fun ThumbnailPlaceholder(modifier: Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.ViewInAr,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
+}
+
+/**
+ * Internal composable that renders a single 3D model inside a [Scene].
+ *
+ * Consumes the shared [PreviewEngineHolder] provided by [ModelPreviewEngineProvider]
+ * instead of creating its own [Engine]. This is the critical change that prevents
+ * EGL context exhaustion in a LazyVerticalGrid.
+ */
 @Composable
 private fun ModelPreviewScene(
     modelPath: String,
+    engineHolder: PreviewEngineHolder,
     rotationAngle: Float,
     onModelLoaded: (ModelNode) -> Unit,
     onError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
+    // Use the SHARED engine and modelLoader — not per-cell instances.
+    val engine = engineHolder.engine
+    val modelLoader = engineHolder.modelLoader
 
     val cameraNode = rememberCameraNode(engine) {
         position = Position(x = 0f, y = 0.4f, z = 2.0f)

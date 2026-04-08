@@ -31,6 +31,7 @@ import com.trendhive.arsample.presentation.ui.components.AddIcon
 import com.trendhive.arsample.presentation.ui.components.ArrowBackIcon
 import com.trendhive.arsample.presentation.ui.components.DeleteIcon
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
+import com.trendhive.arsample.presentation.ui.components.ModelPreviewEngineProvider
 import com.trendhive.arsample.presentation.ui.components.ModelPreviewThumbnail
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ObjectListUiState
@@ -81,6 +82,11 @@ fun ObjectGalleryScreen(
         }
     }
 
+    // Wrap the entire screen with ModelPreviewEngineProvider so all ModelPreviewThumbnail
+    // composables in this screen share a single Filament Engine instance.
+    // Without this, each thumbnail in the LazyVerticalGrid creates its own Engine,
+    // exhausting the Android EGL surface limit and crashing the app.
+    ModelPreviewEngineProvider {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -192,6 +198,7 @@ fun ObjectGalleryScreen(
             }
         )
     }
+    } // end ModelPreviewEngineProvider
 }
 
 /**
