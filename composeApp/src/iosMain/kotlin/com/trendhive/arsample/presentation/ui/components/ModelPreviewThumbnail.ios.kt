@@ -4,10 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -21,10 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitView
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSURL
-import platform.QuickLook.QLThumbnailGenerator
-import platform.QuickLook.QLThumbnailGeneratorRequestRepresentationTypeThumbnail
 import platform.SceneKit.SCNAction
 import platform.SceneKit.SCNAntialiasingMode
 import platform.SceneKit.SCNCamera
@@ -33,15 +30,6 @@ import platform.SceneKit.SCNScene
 import platform.SceneKit.SCNVector3Make
 import platform.SceneKit.SCNView
 import platform.UIKit.UIColor
-import platform.UIKit.UIImage
-import platform.UIKit.UIImageView
-import platform.UIKit.UIScreen
-import platform.UIKit.UIView
-import platform.UIKit.UIViewAutoresizingFlexibleHeight
-import platform.UIKit.UIViewAutoresizingFlexibleWidth
-import platform.UIKit.UIViewContentMode
-import platform.darwin.dispatch_async
-import platform.darwin.dispatch_get_main_queue
 
 private const val TAG = "ModelPreviewThumbnail"
 
@@ -50,8 +38,8 @@ private const val TAG = "ModelPreviewThumbnail"
  *
  * Strategy:
  *  - USDZ  -> SCNView (SceneKit) embedded via UIKitView. Auto-rotation via SCNAction.
- *  - GLB/GLTF -> QLThumbnailGenerator (QuickLook) produces async UIImage.
- *               SceneKit's GLB support via ModelIO is fragile in Kotlin/Native cinterop.
+ *  - GLB/GLTF -> Placeholder icon. QLThumbnailGenerator is not available in
+ *               Kotlin/Native cinterop bindings; GLB is also not the primary iOS format.
  *  - Fallback -> Placeholder icon for unknown formats or load failures.
  */
 @OptIn(ExperimentalForeignApi::class)
@@ -63,7 +51,7 @@ actual fun ModelPreviewThumbnail(
 ) {
     when (ModelPreviewThumbnailHelper.resolvePreviewStrategy(modelPath)) {
         PreviewStrategy.USDZ -> USDZPreview(modelPath = modelPath, modifier = modifier, autoRotate = autoRotate)
-        PreviewStrategy.GLB_THUMBNAIL -> GLBThumbnailPreview(modelPath = modelPath, modifier = modifier)
+        PreviewStrategy.GLB_THUMBNAIL -> PlaceholderPreview(modifier = modifier)
         PreviewStrategy.PLACEHOLDER -> PlaceholderPreview(modifier = modifier)
     }
 }
@@ -81,7 +69,7 @@ private fun USDZPreview(
 ) {
     val sceneRef = remember { mutableStateOf<SCNView?>(null) }
 
-    DisposableEffect(modelPath, autoRotate) {
+    DisposableEffect(modelPath) {
         sceneRef.value?.let { configureSceneView(it, modelPath, autoRotate) }
         onDispose {
             sceneRef.value?.scene?.rootNode?.removeAllActions()
@@ -134,72 +122,7 @@ private fun configureSceneView(scnView: SCNView, modelPath: String, autoRotate: 
 }
 
 // ---------------------------------------------------------------------------
-// GLB / GLTF -> QLThumbnailGenerator (QuickLook, iOS 13+)
-// ---------------------------------------------------------------------------
-
-@OptIn(ExperimentalForeignApi::class)
-@Composable
-private fun GLBThumbnailPreview(modelPath: String, modifier: Modifier) {
-    val imageViewRef = remember { mutableStateOf<UIImageView?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose { imageViewRef.value = null }
-    }
-
-    LaunchedEffect(modelPath) {
-        generateQLThumbnail(modelPath) { image ->
-            val iv = imageViewRef.value ?: return@generateQLThumbnail
-            if (image != null) {
-                dispatch_async(dispatch_get_main_queue()) {
-                    iv.image = image
-                    iv.contentMode = UIViewContentMode.UIViewContentModeScaleAspectFit
-                    iv.backgroundColor = UIColor.clearColor
-                }
-            }
-        }
-    }
-
-    UIKitView(
-        factory = {
-            val container = UIView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0))
-            container.backgroundColor = UIColor.clearColor
-
-            val imageView = UIImageView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0))
-            imageView.contentMode = UIViewContentMode.UIViewContentModeScaleAspectFit
-            imageView.autoresizingMask =
-                UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
-            container.addSubview(imageView)
-            imageViewRef.value = imageView
-            container
-        },
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    )
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private fun generateQLThumbnail(filePath: String, onResult: (UIImage?) -> Unit) {
-    val fileURL = NSURL.fileURLWithPath(filePath)
-    val request = QLThumbnailGenerator.Request(
-        fileAt = fileURL,
-        size = CGSizeMake(160.0, 160.0),
-        scale = UIScreen.mainScreen.scale,
-        representationTypes = QLThumbnailGeneratorRequestRepresentationTypeThumbnail
-    )
-    QLThumbnailGenerator.sharedGenerator.generateRepresentationsForRequest(request) { representation, _, error ->
-        if (error != null) {
-            println("$TAG: QLThumbnailGenerator error: ${error.localizedDescription}")
-            dispatch_async(dispatch_get_main_queue()) { onResult(null) }
-            return@generateRepresentationsForRequest
-        }
-        val image = representation?.uiImage
-        dispatch_async(dispatch_get_main_queue()) { onResult(image) }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Fallback placeholder
+// Placeholder (GLB + unknown formats)
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -210,7 +133,7 @@ private fun PlaceholderPreview(modifier: Modifier) {
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.material3.Icon(
+        Icon(
             imageVector = ViewInArIconPreview,
             contentDescription = null,
             modifier = Modifier.size(32.dp),

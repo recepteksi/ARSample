@@ -24,6 +24,8 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            // Required for ModelPreviewThumbnail.ios.kt: platform.SceneKit.*
+            linkerOpts("-framework", "SceneKit")
         }
     }
     

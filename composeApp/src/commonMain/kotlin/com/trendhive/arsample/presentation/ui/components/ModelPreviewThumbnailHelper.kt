@@ -13,7 +13,7 @@ object ModelPreviewThumbnailHelper {
      *
      * Mirrors the iOS `ModelPreviewThumbnail` routing logic:
      * - "usdz" -> USDZ (SceneKit / SCNView)
-     * - "glb", "gltf" -> GLB_THUMBNAIL (QuickLook generator)
+     * - "glb", "gltf" -> GLB_THUMBNAIL (placeholder icon; QLThumbnailGenerator not available in Kotlin/Native cinterop)
      * - anything else -> PLACEHOLDER
      *
      * @param modelPath Full path or URI of the 3D model file.
@@ -70,7 +70,7 @@ enum class PreviewStrategy {
     /** USDZ format: rendered via SceneKit SCNView */
     USDZ,
 
-    /** GLB / GLTF format: thumbnail via QLThumbnailGenerator */
+    /** GLB / GLTF format: shows placeholder icon (QLThumbnailGenerator not available in Kotlin/Native cinterop) */
     GLB_THUMBNAIL,
 
     /** Unknown or unsupported format: shows placeholder icon */
