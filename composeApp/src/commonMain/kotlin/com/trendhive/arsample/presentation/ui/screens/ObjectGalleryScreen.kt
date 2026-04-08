@@ -82,11 +82,6 @@ fun ObjectGalleryScreen(
         }
     }
 
-    // Wrap the entire screen with ModelPreviewEngineProvider so all ModelPreviewThumbnail
-    // composables in this screen share a single Filament Engine instance.
-    // Without this, each thumbnail in the LazyVerticalGrid creates its own Engine,
-    // exhausting the Android EGL surface limit and crashing the app.
-    ModelPreviewEngineProvider {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -162,12 +157,18 @@ fun ObjectGalleryScreen(
                     )
                 }
                 else -> {
-                    ObjectGalleryGrid(
-                        objects = filteredObjects,
-                        onObjectClick = onObjectClick,
-                        onObjectDelete = onObjectDelete,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    // Wrap only the grid in ModelPreviewEngineProvider so all thumbnail
+                    // composables share a single Filament Engine instance. Narrowing scope
+                    // here avoids wrapping unrelated UI (dialogs, snackbars) and makes
+                    // engine lifecycle identical to the grid's lifecycle.
+                    ModelPreviewEngineProvider {
+                        ObjectGalleryGrid(
+                            objects = filteredObjects,
+                            onObjectClick = onObjectClick,
+                            onObjectDelete = onObjectDelete,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -198,7 +199,6 @@ fun ObjectGalleryScreen(
             }
         )
     }
-    } // end ModelPreviewEngineProvider
 }
 
 /**
@@ -258,7 +258,7 @@ private fun ObjectGalleryGrid(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ObjectGalleryCard(
+private fun ObjectGalleryCard(
     arObject: ARObject,
     onClick: () -> Unit,
     onDelete: () -> Unit,

@@ -59,6 +59,10 @@ actual fun ModelPreviewEngineProvider(content: @Composable () -> Unit) {
     DisposableEffect(Unit) {
         onDispose {
             Log.d(TAG, "Disposing shared preview engine")
+            // Explicitly destroy Filament resources to prevent GL/EGL memory leaks
+            // on repeated gallery open/close cycles.
+            modelLoader.destroy()
+            engine.destroy()
         }
     }
 
