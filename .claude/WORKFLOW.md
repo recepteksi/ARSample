@@ -41,11 +41,11 @@ main (production-ready)
   │
   └─── dev (integration branch)
         │
-        ├─── feature/ddd-value-objects (task branch)
-        ├─── feature/drag-and-drop (task branch)
-        ├─── feature/bottomsheet-redesign (task branch)
-        ├─── bugfix/bottomsheet-scroll (task branch)
-        └─── ci/ios-workflow (task branch)
+        ├─── feature/ARS-5-3d-model-preview (task branch)
+        ├─── bugfix/ARS-6-gallery-crash (task branch)
+        ├─── fix/ARS-7-camera-controls-symmetry (task branch)
+        ├─── feature/ARS-8-short-description (task branch)
+        └─── bugfix/ARS-9-short-description (task branch)
 ```
 
 ### Branch Types
@@ -78,7 +78,7 @@ main (production-ready)
 │    Agent creates feature branch from 'dev'                   │
 │    git checkout dev                                          │
 │    git pull origin dev                                       │
-│    git checkout -b feature/task-name                         │
+│    git checkout -b feature/ARS-N-task-name                         │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -105,7 +105,7 @@ main (production-ready)
 │    Agent commits and pushes to remote                        │
 │    git add .                                                 │
 │    git commit -m "feat: task description"                    │
-│    git push origin feature/task-name                         │
+│    git push origin feature/ARS-N-task-name                         │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -159,18 +159,18 @@ main (production-ready)
 ### Components
 
 - **type**: Branch type prefix (feature, bugfix, ci, refactor, test)
-- **task-id**: Task ID from SQL database (kebab-case)
+- **task-id**: Task ID from Jira board (ARS-N format, e.g. ARS-5)
 - **short-description**: Optional 2-3 word description
 
 ### Examples
 
 | Task ID | Branch Name | Agent |
 |---------|-------------|-------|
-| `ddd-value-objects` | `refactor/ddd-value-objects` | main-developer-agent |
-| `drag-and-drop` | `feature/drag-and-drop` | android-expert-agent |
-| `bottomsheet-scroll-bug` | `bugfix/bottomsheet-scroll` | bug-fixer-agent |
-| `github-workflow-ios` | `ci/ios-workflow` | ios-expert-agent |
-| `prevent-accidental-tap` | `feature/prevent-accidental-tap` | main-developer-agent |
+| `ARS-5` | `feature/ARS-5-3d-model-preview` | android-expert-agent |
+| `ARS-6` | `bugfix/ARS-6-gallery-crash` | bug-fixer-agent |
+| `ARS-7` | `fix/ARS-7-camera-controls-symmetry` | main-developer-agent |
+| `ARS-8` | `feature/ARS-8-short-description` | main-developer-agent |
+| `ARS-9` | `bugfix/ARS-9-short-description` | bug-fixer-agent |
 
 ### Branch Type Selection Guide
 
