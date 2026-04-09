@@ -36,7 +36,11 @@ actual fun PlatformARView(
     onObjectPositionChanged: ((placedObjectId: String, x: Float, y: Float, z: Float) -> Unit)?,
     onDragStart: ((objectId: String) -> Unit)?,
     onDragMove: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
-    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?
+    onDragEnd: ((objectId: String, screenX: Float, screenY: Float) -> Unit)?,
+    captureRequest: Boolean,
+    onCaptureComplete: ((ByteArray?) -> Unit)?,
+    onRecordingCallbacksReady: ((onStart: (String) -> Boolean, onStop: () -> Boolean) -> Unit)?,
+    onRecordingCallbacksClear: (() -> Unit)?
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -119,7 +123,11 @@ actual fun PlatformARView(
                 onObjectPositionChanged = onObjectPositionChanged,
                 onDragStart = onDragStart,
                 onDragMove = onDragMove,
-                onDragEnd = onDragEnd
+                onDragEnd = onDragEnd,
+                captureRequest = captureRequest,
+                onCaptureComplete = onCaptureComplete,
+                onRecordingCallbacksReady = onRecordingCallbacksReady,
+                onRecordingCallbacksClear = onRecordingCallbacksClear
             )
         }
         else -> {

@@ -1,14 +1,19 @@
 package com.trendhive.arsample.presentation.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.trendhive.arsample.domain.model.ARObject
+import com.trendhive.arsample.domain.model.ModelType
 import com.trendhive.arsample.presentation.ui.components.AddIcon
 import com.trendhive.arsample.presentation.ui.components.DeleteIcon
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
@@ -155,6 +160,13 @@ fun ObjectListItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Thumbnail or icon
+            ObjectThumbnailItem(
+                thumbnailUri = obj.thumbnailUri,
+                modelType = obj.modelType,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = obj.name,
@@ -174,5 +186,35 @@ fun ObjectListItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * Displays a thumbnail for a 3D object in the object list.
+ * Shows a custom thumbnail image if available, otherwise displays
+ * a model-type specific icon.
+ */
+@Composable
+private fun ObjectThumbnailItem(
+    thumbnailUri: String?,
+    modelType: ModelType,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(8.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // For now, use placeholder icons based on model type
+        // TODO: When thumbnailUri is available, load actual thumbnail image
+        Icon(
+            imageVector = Icons.Default.ViewInAr,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }

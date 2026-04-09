@@ -6,24 +6,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.trendhive.arsample.application.usecase.*
+import com.trendhive.arsample.domain.model.MediaItem
 import com.trendhive.arsample.presentation.ui.screens.ARScreen
+import com.trendhive.arsample.presentation.ui.screens.GalleryScreen
+import com.trendhive.arsample.presentation.ui.screens.ObjectGalleryScreen
 import com.trendhive.arsample.presentation.ui.screens.ObjectListScreen
 import com.trendhive.arsample.presentation.viewmodel.ARViewModel
+import com.trendhive.arsample.presentation.viewmodel.GalleryViewModel
 import com.trendhive.arsample.presentation.viewmodel.ObjectListViewModel
+import org.koin.compose.koinInject
 
 @Composable
-fun App(
-    importObjectUseCase: ImportObjectUseCase,
-    getAllObjectsUseCase: GetAllObjectsUseCase,
-    deleteObjectUseCase: DeleteObjectUseCase,
-    placeObjectInSceneUseCase: PlaceObjectInSceneUseCase,
-    removeObjectFromSceneUseCase: RemoveObjectFromSceneUseCase,
-    getSceneUseCase: GetSceneUseCase,
-    saveSceneUseCase: SaveSceneUseCase,
-    moveObjectUseCase: MoveObjectUseCase,
-    sceneRepository: com.trendhive.arsample.domain.repository.ARSceneRepository
-) {
+fun App() {
     MaterialTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -31,26 +25,11 @@ fun App(
         ) {
             var currentScreen by remember { mutableStateOf<Screen>(Screen.AR(null)) }
 
-            val objectListViewModel: ObjectListViewModel = viewModel {
-                ObjectListViewModel(
-                    getAllObjectsUseCase,
-                    deleteObjectUseCase,
-                    importObjectUseCase
-                )
-            }
+            // Inject ViewModels via Koin (only inject when needed to avoid premature initialization)
+            val objectListViewModel: ObjectListViewModel = koinInject()
             val objectListUiState by objectListViewModel.uiState.collectAsState()
             
-            // Create ARViewModel once, outside the when block
-            val arViewModel: ARViewModel = viewModel {
-                ARViewModel(
-                    placeObjectInSceneUseCase,
-                    removeObjectFromSceneUseCase,
-                    getSceneUseCase,
-                    saveSceneUseCase,
-                    sceneRepository,
-                    moveObjectUseCase
-                )
-            }
+            val arViewModel: ARViewModel = koinInject()
             val arUiState by arViewModel.uiState.collectAsState()
 
             when (val screen = currentScreen) {
@@ -68,6 +47,41 @@ fun App(
                         onDeleteObject = { objectListViewModel.deleteObject(it) }
                     )
                 }
+                is Screen.ObjectGallery -> {
+                    ObjectGalleryScreen(
+                        uiState = objectListUiState,
+                        onObjectClick = { arObject ->
+                            objectListViewModel.clearImportSuccess()
+                            currentScreen = Screen.AR(arObject.id)
+                        },
+                        onObjectDelete = { id ->
+                            objectListViewModel.deleteObject(id)
+                        },
+                        onImportClick = { uri, name, type ->
+                            objectListViewModel.importObject(uri, name, type)
+                        },
+                        onNavigateBack = { currentScreen = Screen.AR(null) },
+                        onNavigateToAR = { currentScreen = Screen.AR(null) }
+                    )
+                }
+                is Screen.Gallery -> {
+                    // Lazy inject GalleryViewModel only when Gallery screen is shown
+                    // This prevents premature MediaRepository access before user navigates to Gallery
+                    val galleryViewModel: GalleryViewModel = koinInject()
+                    val galleryUiState by galleryViewModel.uiState.collectAsState()
+                    
+                    GalleryScreen(
+                        uiState = galleryUiState,
+                        onNavigateBack = { currentScreen = Screen.AR(null) },
+                        onPhotoClick = { galleryViewModel.selectMedia(MediaItem.Photo(it)) },
+                        onVideoClick = { galleryViewModel.selectMedia(MediaItem.Video(it)) },
+                        onDeletePhoto = { galleryViewModel.deletePhoto(it) },
+                        onDeleteVideo = { galleryViewModel.deleteVideo(it) },
+                        onFilterChange = { galleryViewModel.setFilter(it) },
+                        onClosePreview = { galleryViewModel.closePreview() },
+                        onClearError = { galleryViewModel.clearError() }
+                    )
+                }
                 is Screen.AR -> {
                     LaunchedEffect(screen.selectedObjectId) {
                         if (screen.selectedObjectId != null) {
@@ -79,7 +93,7 @@ fun App(
                         uiState = arUiState,
                         availableObjects = objectListUiState.objects,
                         onSelectObject = { arViewModel.selectObject(it) },
-                        onNavigateBack = { currentScreen = Screen.ObjectList },
+                        onNavigateBack = { currentScreen = Screen.ObjectGallery },
                         onImportObject = { uri, name, type ->
                             objectListViewModel.importObject(uri, name, type)
                         },
@@ -110,6 +124,18 @@ fun App(
                         },
                         onDragEnd = {
                             arViewModel.onDragEnd()
+                        },
+                        onToggleRecording = {
+                            arViewModel.toggleRecording()
+                        },
+                        onClearRecordingState = {
+                            arViewModel.clearRecordingState()
+                        },
+                        onCapturePhoto = {
+                            arViewModel.requestCapture()
+                        },
+                        onOpenGallery = {
+                            currentScreen = Screen.Gallery
                         }
                     )
                 }
@@ -120,5 +146,7 @@ fun App(
 
 sealed class Screen {
     data object ObjectList : Screen()
+    data object ObjectGallery : Screen()
+    data object Gallery : Screen()
     data class AR(val selectedObjectId: String?) : Screen()
 }

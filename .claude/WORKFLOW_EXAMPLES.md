@@ -251,12 +251,12 @@ git checkout -b ci/ios-workflow
 # 2. Create workflow files
 # Created:
 # - .github/workflows/ios-ci.yml
-# - .github/workflows/IOS_WORKFLOW_README.md
+# - docs/ios/ios-workflow-readme.md
 # - iosApp/.swiftlint.yml
 
 # 3. Commit
 git add .github/workflows/ios-ci.yml
-git add .github/workflows/IOS_WORKFLOW_README.md
+git add docs/ios/ios-workflow-readme.md
 git add iosApp/.swiftlint.yml
 
 git commit -m "ci: add GitHub Actions workflow for iOS builds

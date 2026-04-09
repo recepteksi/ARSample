@@ -1,36 +1,53 @@
 package com.trendhive.arsample.presentation.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.trendhive.arsample.ar.PlatformARView
 import com.trendhive.arsample.domain.model.ARObject
 import com.trendhive.arsample.domain.model.PlacedObject
 import com.trendhive.arsample.presentation.ui.components.ArrowBackIcon
+import com.trendhive.arsample.presentation.ui.components.CameraControlsBar
 import com.trendhive.arsample.presentation.ui.components.ImportDialog
 import com.trendhive.arsample.presentation.ui.components.MenuIcon
+import com.trendhive.arsample.presentation.ui.components.RecordingBorderGlow
+import com.trendhive.arsample.presentation.ui.components.RecordingTimerDisplay
 import com.trendhive.arsample.presentation.platform.rememberModelFilePicker
 import com.trendhive.arsample.presentation.viewmodel.ARUiState
+import com.trendhive.arsample.presentation.viewmodel.RecordingState
 import org.jetbrains.compose.resources.stringResource
 import arsample.composeapp.generated.resources.Res
 import arsample.composeapp.generated.resources.*
@@ -50,6 +67,10 @@ fun ARScreen(
     onDragStart: (objectId: String, touchX: Float, touchY: Float) -> Unit = { _, _, _ -> },
     onDragUpdate: (newX: Float, newY: Float, newZ: Float, screenX: Float, screenY: Float, isOverTrash: Boolean) -> Unit = { _, _, _, _, _, _ -> },
     onDragEnd: () -> Unit = {},
+    onToggleRecording: () -> Unit = {},
+    onClearRecordingState: () -> Unit = {},
+    onCapturePhoto: () -> Unit = {},
+    onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -109,17 +130,23 @@ fun ARScreen(
                 .padding(paddingValues)
         ) {
             val density = LocalDensity.current
-            val trashZoneSize = 80.dp
+            // TrashZone dimensions must match the actual component:
+            // modifier = modifier.padding(16.dp).size(width = 100.dp, height = 90.dp)
+            val trashZoneWidth = 100.dp
+            val trashZoneHeight = 90.dp
             val trashZonePadding = 16.dp
-            val trashZoneSizePx = with(density) { trashZoneSize.toPx() }
+            val trashZoneWidthPx = with(density) { trashZoneWidth.toPx() }
+            val trashZoneHeightPx = with(density) { trashZoneHeight.toPx() }
             val trashZonePaddingPx = with(density) { trashZonePadding.toPx() }
             val screenHeightPx = with(density) { maxHeight.toPx() }
             val screenWidthPx = with(density) { maxWidth.toPx() }
             
-            // Trash zone is at bottom-right: check both X and Y coordinates
+            // Trash zone is at bottom-right (Alignment.BottomEnd):
+            // - X starts at: screenWidth - padding - width
+            // - Y starts at: screenHeight - padding - height
             fun isOverTrashZone(screenX: Float, screenY: Float): Boolean {
-                val trashLeft = screenWidthPx - trashZoneSizePx - trashZonePaddingPx
-                val trashTop = screenHeightPx - trashZoneSizePx - trashZonePaddingPx
+                val trashLeft = screenWidthPx - trashZoneWidthPx - trashZonePaddingPx
+                val trashTop = screenHeightPx - trashZoneHeightPx - trashZonePaddingPx
                 return screenX >= trashLeft && screenY >= trashTop
             }
 
@@ -225,50 +252,57 @@ fun ARScreen(
                 )
             }
 
-            // Selected object indicator - compact chip style
-            uiState.selectedObjectId?.let { selectedId ->
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-                    tonalElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Selected object indicator - positioned at top-left below app bar
+            AnimatedVisibility(
+                visible = uiState.selectedObjectId != null,
+                enter = fadeIn(tween(200)) + slideInVertically { -it },
+                exit = fadeOut(tween(200)) + slideOutVertically { -it },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 12.dp, top = 8.dp)
+            ) {
+                uiState.selectedObjectId?.let { selectedId ->
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.7f),
+                        tonalElevation = 4.dp
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ViewInAr,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column {
-                            Text(
-                                text = selectedObject?.name ?: "${stringResource(Res.string.selected)}: ${selectedId.take(8)}…",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(Res.string.long_press_to_place),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        // Subtle cancel button
-                        IconButton(
-                            onClick = { onSelectObject(null) },
-                            modifier = Modifier.size(24.dp)
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(Res.string.cancel),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = Icons.Default.ViewInAr,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
                             )
+                            Column {
+                                Text(
+                                    text = selectedObject?.name ?: selectedId.take(8),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = stringResource(Res.string.long_press_to_place),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                            // Cancel button
+                            IconButton(
+                                onClick = { onSelectObject(null) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(Res.string.cancel),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }
@@ -279,6 +313,68 @@ fun ARScreen(
                 isHovered = isOverTrashZone,
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
+
+            // Recording border glow effect
+            RecordingBorderGlow(isRecording = uiState.isRecording)
+
+            // Recording Timer Display (top center when recording)
+            AnimatedVisibility(
+                visible = uiState.isRecording,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(300)),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+            ) {
+                RecordingTimerDisplay(
+                    durationSeconds = uiState.recordingDurationSeconds
+                )
+            }
+
+            // Camera Controls Bar (bottom)
+            CameraControlsBar(
+                isRecording = uiState.isRecording,
+                onCapturePhoto = onCapturePhoto,
+                onToggleRecording = onToggleRecording,
+                onOpenGallery = onOpenGallery,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            )
+
+            // Recording state snackbar
+            val recordingState = uiState.recordingState
+            if (recordingState is RecordingState.Success || recordingState is RecordingState.Error) {
+                LaunchedEffect(recordingState) {
+                    kotlinx.coroutines.delay(3000)
+                    onClearRecordingState()
+                }
+                
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .padding(bottom = 120.dp),
+                    containerColor = when (recordingState) {
+                        is RecordingState.Success -> MaterialTheme.colorScheme.primaryContainer
+                        is RecordingState.Error -> MaterialTheme.colorScheme.errorContainer
+                        else -> MaterialTheme.colorScheme.surface
+                    }
+                ) {
+                    Text(
+                        text = when (recordingState) {
+                            is RecordingState.Success -> recordingState.message
+                            is RecordingState.Error -> recordingState.message
+                            else -> ""
+                        },
+                        color = when (recordingState) {
+                            is RecordingState.Success -> MaterialTheme.colorScheme.onPrimaryContainer
+                            is RecordingState.Error -> MaterialTheme.colorScheme.onErrorContainer
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+            }
 
         }
 
@@ -383,17 +479,32 @@ fun TrashZone(
         Box(
             modifier = modifier
                 .padding(16.dp)
-                .size(80.dp)
+                .size(width = 100.dp, height = 90.dp)
+                .shadow(
+                    elevation = if (isHovered) 8.dp else 4.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f),
+                    spotColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                )
                 .background(
                     color = if (isHovered)
-                        MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
                     else
                         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isHovered)
+                        MaterialTheme.colorScheme.onError.copy(alpha = 0.3f)
+                    else
+                        MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(16.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Column(
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -406,14 +517,16 @@ fun TrashZone(
                         MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(if (isHovered) 32.dp else 28.dp)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = stringResource(if (isHovered) Res.string.release_to_delete else Res.string.drag_to_delete),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isHovered)
                         MaterialTheme.colorScheme.onError
                     else
-                        MaterialTheme.colorScheme.onErrorContainer
+                        MaterialTheme.colorScheme.onErrorContainer,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -504,13 +617,15 @@ private fun ObjectListItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ViewInAr,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+            // 3D model preview thumbnail
+            ObjectThumbnail(
+                modelUri = arObject.modelUri,
+                thumbnailUri = arObject.thumbnailUri,
+                modelType = arObject.modelType,
+                isSelected = isSelected,
+                modifier = Modifier.size(48.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = arObject.name,
@@ -530,6 +645,39 @@ private fun ObjectListItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * Displays a thumbnail for a 3D object.
+ * Shows a 3D model preview when modelUri is available,
+ * otherwise displays a placeholder icon.
+ */
+@Composable
+private fun ObjectThumbnail(
+    modelUri: String,
+    thumbnailUri: String?,
+    modelType: com.trendhive.arsample.domain.model.ModelType,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    Box(
+        modifier = modifier
+            .background(backgroundColor, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Use 3D model preview for interactive thumbnail
+        com.trendhive.arsample.presentation.ui.components.ModelPreviewThumbnail(
+            modelPath = modelUri,
+            modifier = Modifier.fillMaxSize(),
+            autoRotate = true
+        )
     }
 }
 
@@ -612,6 +760,86 @@ private fun PlacedObjectListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+/**
+ * Video recording button that toggles between start and stop states.
+ */
+@Composable
+fun VideoRecordButton(
+    isRecording: Boolean,
+    onToggleRecording: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FloatingActionButton(
+        onClick = onToggleRecording,
+        modifier = modifier.size(56.dp),
+        containerColor = if (isRecording) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
+        contentColor = if (isRecording) {
+            MaterialTheme.colorScheme.onError
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        }
+    ) {
+        Icon(
+            imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
+            contentDescription = if (isRecording) "Stop recording" else "Start recording",
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+/**
+ * Recording indicator - pulsing red dot shown when recording is active.
+ */
+@Composable
+fun RecordingIndicator(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "recording_pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
+        tonalElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Pulsing red dot
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .alpha(alpha)
+                    .background(
+                        color = Color.Red,
+                        shape = CircleShape
+                    )
+            )
+            Text(
+                text = "REC",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
         }
     }
 }
