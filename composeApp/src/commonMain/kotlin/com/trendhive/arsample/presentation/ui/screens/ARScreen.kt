@@ -70,6 +70,7 @@ fun ARScreen(
     onToggleRecording: () -> Unit = {},
     onClearRecordingState: () -> Unit = {},
     onCapturePhoto: () -> Unit = {},
+    onPhotoCaptured: ((ByteArray?) -> Unit)? = null,
     onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -175,11 +176,11 @@ fun ARScreen(
                     if (draggingObjectId != objectId) return@PlatformARView
                     val isOverTrash = isOverTrashZone(screenX, screenY)
                     isOverTrashZone = isOverTrash
-                    
+
                     // Find the current object to get its position
                     val currentObj = currentUiState.placedObjects.find { it.objectId == objectId }
                     val position = currentObj?.position
-                    
+
                     // Call ViewModel drag update with position (use 0,0,0 if not found)
                     onDragUpdate(
                         position?.x ?: 0f,
@@ -214,7 +215,13 @@ fun ARScreen(
                     isDragging = false
                     draggingObjectId = null
                     isOverTrashZone = false
-                }
+                },
+                // FIX: Wire photo capture signal from ARUiState to PlatformARView.
+                // uiState.captureRequest becomes true when the user taps the capture button
+                // (via ARViewModel.requestCapture()). Without passing it here, the PixelCopy
+                // capture in ARView never fires and photos are never saved.
+                captureRequest = uiState.captureRequest,
+                onCaptureComplete = onPhotoCaptured
             )
 
             // Loading indicator

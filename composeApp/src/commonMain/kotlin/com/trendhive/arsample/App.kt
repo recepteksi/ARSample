@@ -134,6 +134,9 @@ fun App() {
                         onCapturePhoto = {
                             arViewModel.requestCapture()
                         },
+                        onPhotoCaptured = { imageData ->
+                            arViewModel.onPhotoCaptured(imageData)
+                        },
                         onOpenGallery = {
                             currentScreen = Screen.Gallery
                         }
