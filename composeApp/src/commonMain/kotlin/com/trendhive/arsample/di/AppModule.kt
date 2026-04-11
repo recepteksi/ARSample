@@ -73,8 +73,8 @@ val applicationModule = module {
  * Presentation layer module - ViewModels
  */
 val presentationModule = module {
-    factory { ObjectListViewModel(get(), get(), get()) }
-    factory { 
+    single { ObjectListViewModel(get(), get(), get()) }
+    single {
         ARViewModel(
             placeObjectUseCase = get(),
             removeObjectUseCase = get(),
@@ -83,10 +83,13 @@ val presentationModule = module {
             sceneRepository = get(),
             moveObjectUseCase = get(),
             capturePhotoUseCase = get(),
-            recordVideoUseCase = get()
-        ) 
+            recordVideoUseCase = get(),
+            getPhotosUseCase = get()
+        )
     }
-    factory { GalleryViewModel(get(), get(), get(), get()) }
+    // GalleryViewModel registered as single to prevent a new instance (and leaking CoroutineScope)
+    // from being created on every recomposition when koinInject() is called inside the Gallery branch.
+    single { GalleryViewModel(get(), get(), get(), get()) }
 }
 
 /**
