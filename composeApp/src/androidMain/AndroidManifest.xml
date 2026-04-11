@@ -5,6 +5,11 @@
     <!-- Camera izni - AR icin zorunlu -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Medya okuma izinleri - Galeri icin -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
     <!-- AR ozelligi gerektiren cihazlari belirt -->
     <uses-feature
         android:name="android.hardware.camera.ar"

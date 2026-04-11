@@ -77,7 +77,7 @@ class GalleryViewModel(
     private val getVideosUseCase: GetVideosUseCase,
     private val deletePhotoUseCase: DeletePhotoUseCase,
     private val deleteVideoUseCase: DeleteVideoUseCase
-) : androidx.lifecycle.ViewModel() {
+) {
     
     private val _uiState = MutableStateFlow(GalleryUiState())
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()

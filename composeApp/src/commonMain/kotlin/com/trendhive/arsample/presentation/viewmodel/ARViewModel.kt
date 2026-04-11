@@ -9,6 +9,7 @@ import com.trendhive.arsample.domain.model.TrashZoneState
 import com.trendhive.arsample.domain.model.Vector3
 import com.trendhive.arsample.domain.model.currentTimeMillis
 import com.trendhive.arsample.application.usecase.CapturePhotoUseCase
+import com.trendhive.arsample.application.usecase.GetPhotosUseCase
 import com.trendhive.arsample.application.usecase.MoveObjectUseCase
 import com.trendhive.arsample.application.usecase.PlaceObjectInSceneUseCase
 import com.trendhive.arsample.application.usecase.RecordVideoUseCase
@@ -60,7 +61,15 @@ data class ARUiState(
     val captureRequest: Boolean = false,
     val recordingState: RecordingState = RecordingState.Idle,
     val isRecording: Boolean = false,
-    val recordingDurationSeconds: Long = 0L
+    val recordingDurationSeconds: Long = 0L,
+    // Raw bytes of the most recently captured photo, used for the thumbnail in the AR screen.
+    // Null when no photo has been taken yet in this session.
+    val lastCapturedPhotoData: ByteArray? = null,
+    // File path / content URI of the most recent photo — survives process restart because
+    // it is re-loaded from the MediaRepository when the scene is loaded.
+    val lastCapturedPhotoPath: String? = null,
+    // Momentarily true right after a photo is captured to trigger the shutter flash animation.
+    val showShutterFlash: Boolean = false
 )
 
 class ARViewModel(
@@ -71,7 +80,8 @@ class ARViewModel(
     private val sceneRepository: ARSceneRepository,
     private val moveObjectUseCase: MoveObjectUseCase,
     private val capturePhotoUseCase: CapturePhotoUseCase? = null,
-    private val recordVideoUseCase: RecordVideoUseCase? = null
+    private val recordVideoUseCase: RecordVideoUseCase? = null,
+    private val getPhotosUseCase: GetPhotosUseCase? = null
 ) : androidx.lifecycle.ViewModel() {
 
     companion object {
@@ -96,10 +106,19 @@ class ARViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val scene = sceneRepository.getOrCreateDefaultScene()
+
+                // Load the most recent captured photo path so the thumbnail
+                // persists across app restarts (the ByteArray is in-memory only).
+                val lastPhotoPath = getPhotosUseCase?.invoke()
+                    ?.getOrNull()
+                    ?.firstOrNull()
+                    ?.filePath
+
                 _uiState.value = _uiState.value.copy(
                     currentScene = scene,
                     placedObjects = scene.objects,
-                    isLoading = false
+                    isLoading = false,
+                    lastCapturedPhotoPath = lastPhotoPath
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -336,26 +355,34 @@ class ARViewModel(
     fun onPhotoCaptured(imageData: ByteArray?) {
         // Reset capture request
         _uiState.value = _uiState.value.copy(captureRequest = false)
-        
+
         if (imageData == null) {
             _uiState.value = _uiState.value.copy(
                 captureState = CaptureState.Error("Failed to capture photo")
             )
             return
         }
-        
+
         if (capturePhotoUseCase == null) {
             _uiState.value = _uiState.value.copy(
                 captureState = CaptureState.Error("Photo capture not available")
             )
             return
         }
-        
+
+        // Trigger shutter flash and store the photo bytes for the thumbnail immediately,
+        // before the async save completes.
+        _uiState.value = _uiState.value.copy(
+            lastCapturedPhotoData = imageData,
+            showShutterFlash = true
+        )
+
         viewModelScope.launch {
             capturePhotoUseCase.invoke(imageData).fold(
                 onSuccess = { photo ->
                     _uiState.value = _uiState.value.copy(
-                        captureState = CaptureState.Success("Photo saved")
+                        captureState = CaptureState.Success("Photo saved"),
+                        lastCapturedPhotoPath = photo.filePath
                     )
                 },
                 onFailure = { e ->
@@ -365,6 +392,13 @@ class ARViewModel(
                 }
             )
         }
+    }
+
+    /**
+     * Dismiss the shutter flash overlay once the animation has played.
+     */
+    fun clearShutterFlash() {
+        _uiState.value = _uiState.value.copy(showShutterFlash = false)
     }
 
     /**

@@ -3,6 +3,7 @@ package com.trendhive.arsample.presentation.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -71,6 +72,8 @@ fun ARScreen(
     onClearRecordingState: () -> Unit = {},
     onCapturePhoto: () -> Unit = {},
     onOpenGallery: () -> Unit = {},
+    onPhotoCaptured: ((ByteArray?) -> Unit)? = null,
+    onClearShutterFlash: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // CRITICAL FIX: Use rememberUpdatedState to ensure callbacks always capture latest state
@@ -214,7 +217,9 @@ fun ARScreen(
                     isDragging = false
                     draggingObjectId = null
                     isOverTrashZone = false
-                }
+                },
+                captureRequest = uiState.captureRequest,
+                onCaptureComplete = onPhotoCaptured
             )
 
             // Loading indicator
@@ -331,16 +336,45 @@ fun ARScreen(
                 )
             }
 
-            // Camera Controls Bar (bottom)
-            CameraControlsBar(
-                isRecording = uiState.isRecording,
-                onCapturePhoto = onCapturePhoto,
-                onToggleRecording = onToggleRecording,
-                onOpenGallery = onOpenGallery,
+            // Shutter flash overlay - white flash that fades when photo is captured
+            val shutterAlpha by animateFloatAsState(
+                targetValue = if (uiState.showShutterFlash) 1f else 0f,
+                animationSpec = tween(durationMillis = 100),
+                label = "shutter_flash"
+            )
+            LaunchedEffect(uiState.showShutterFlash) {
+                if (uiState.showShutterFlash) {
+                    kotlinx.coroutines.delay(180)
+                    onClearShutterFlash()
+                }
+            }
+            if (shutterAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = shutterAlpha))
+                )
+            }
+
+            // Camera Controls Bar (bottom) — hidden while dragging so it doesn't
+            // intercept the touch events that the ARSceneView needs to detect
+            // the trash-zone drop.
+            AnimatedVisibility(
+                visible = !isDragging,
+                enter = fadeIn(tween(150)),
+                exit = fadeOut(tween(150)),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp)
-            )
+            ) {
+                CameraControlsBar(
+                    isRecording = uiState.isRecording,
+                    onCapturePhoto = onCapturePhoto,
+                    onToggleRecording = onToggleRecording,
+                    onOpenGallery = onOpenGallery,
+                    lastPhotoUri = uiState.lastCapturedPhotoPath,
+                )
+            }
 
             // Recording state snackbar
             val recordingState = uiState.recordingState

@@ -29,6 +29,7 @@ import io.github.sceneview.node.ModelNode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -229,22 +230,35 @@ fun ARView(
                 Log.w(TAG, "AR session is not initialized")
                 return null
             }
-            
+
             val frame = sceneView.frame
             if (frame == null) {
                 Log.w(TAG, "AR frame is not available")
                 return null
             }
-            
+
             val camera = frame.camera
             if (camera.trackingState != TrackingState.TRACKING) {
                 Log.w(TAG, "AR camera not tracking, state: ${camera.trackingState}")
                 return null
             }
-            
+
             frame
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get AR frame: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * Returns any available AR frame, regardless of tracking state.
+     * Used for node hit-testing which only needs camera matrices, not plane tracking.
+     */
+    fun getAnyARFrame(sceneView: ARSceneView): Frame? {
+        return try {
+            if (sceneView.session == null) return null
+            sceneView.frame
+        } catch (e: Exception) {
             null
         }
     }
@@ -266,6 +280,7 @@ fun ARView(
     fun worldToScreen(view: ARSceneView, frame: Frame, worldX: Float, worldY: Float, worldZ: Float): Pair<Float, Float>? {
         return try {
             val camera = frame.camera
+            // Require full TRACKING state — projection matrices are only accurate when tracking
             if (camera.trackingState != TrackingState.TRACKING) {
                 return null
             }
@@ -320,7 +335,8 @@ fun ARView(
      */
     fun hitTestNode(view: ARSceneView, x: Float, y: Float): String? {
         return try {
-            val frame = getARFrameSafely(view) ?: return null
+            // Use any available frame — node selection doesn't need strict tracking
+            val frame = getAnyARFrame(view) ?: return null
             
             // Screen-space hit detection: project each node to screen and check 2D distance
             // This works regardless of where on the model the user touches
@@ -412,6 +428,14 @@ fun ARView(
                         }
                     }
 
+                    // Guard: if the LaunchedEffect was cancelled while loading (e.g. user
+                    // navigated away and ARSceneView was destroyed), skip addChildNode to
+                    // prevent NullPointerException inside SceneView's CameraComponent.
+                    if (!isActive || arSceneView == null) {
+                        Log.d(TAG, "Skipping addChildNode — view disposed during model load")
+                        return@LaunchedEffect
+                    }
+
                     if (modelInstance != null) {
                         val placedObjectId = obj.objectId
                         val modelNode = ModelNode(modelInstance).apply {
@@ -473,7 +497,9 @@ fun ARView(
 
     DisposableEffect(Unit) {
         onDispose {
-            arSceneView?.destroy()
+            // Do NOT call arSceneView?.destroy() here.
+            // SceneView's onDetachedFromWindow() already calls destroy() internally.
+            // Explicit destroy here causes double-destroy → NPE in CameraNode.
         }
     }
     
@@ -514,18 +540,22 @@ fun ARView(
         }
         
         onDispose {
-            // Stop any ongoing recording
-            if (videoRecorder.isRecording()) {
-                videoRecorder.stopRecording()
+            try {
+                // Stop any ongoing recording
+                if (videoRecorder.isRecording()) {
+                    videoRecorder.stopRecording()
+                }
+                // Clear recording callbacks
+                val repo = mediaRepository
+                if (repo != null && repo is com.trendhive.arsample.infrastructure.persistence.local.MediaRepositoryImpl) {
+                    repo.clearRecordingCallbacks()
+                } else {
+                    currentOnRecordingCallbacksClear?.invoke()
+                }
+                videoRecorder.setARSceneView(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in video recorder dispose", e)
             }
-            // Clear recording callbacks
-            val repo = mediaRepository
-            if (repo != null && repo is com.trendhive.arsample.infrastructure.persistence.local.MediaRepositoryImpl) {
-                repo.clearRecordingCallbacks()
-            } else {
-                currentOnRecordingCallbacksClear?.invoke()
-            }
-            videoRecorder.setARSceneView(null)
         }
     }
     
@@ -588,6 +618,30 @@ fun ARView(
                         config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
                         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                             config.depthMode = Config.DepthMode.AUTOMATIC
+                        }
+                    }
+
+                    // Animation update: drive GLB/glTF animations every frame
+                    onFrame = { _ ->
+                        // Guard: skip if view is no longer attached (partially destroyed)
+                        if (isAttachedToWindow) {
+                            val elapsedSeconds = System.nanoTime() / 1_000_000_000.0
+                            for ((_, node) in currentNodes) {
+                                try {
+                                    val animator = node.modelInstance.animator
+                                    if (animator.animationCount > 0) {
+                                        repeat(animator.animationCount) { i ->
+                                            val duration = animator.getAnimationDuration(i)
+                                            if (duration > 0f) {
+                                                animator.applyAnimation(i, (elapsedSeconds % duration).toFloat())
+                                            }
+                                        }
+                                        animator.updateBoneMatrices()
+                                    }
+                                } catch (_: Exception) {
+                                    // Ignore per-frame animation errors
+                                }
+                            }
                         }
                     }
 

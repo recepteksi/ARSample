@@ -69,6 +69,11 @@ fun App() {
                     // This prevents premature MediaRepository access before user navigates to Gallery
                     val galleryViewModel: GalleryViewModel = koinInject()
                     val galleryUiState by galleryViewModel.uiState.collectAsState()
+
+                    // Refresh media list each time the Gallery screen opens
+                    LaunchedEffect(Unit) {
+                        galleryViewModel.loadMedia()
+                    }
                     
                     GalleryScreen(
                         uiState = galleryUiState,
@@ -136,6 +141,12 @@ fun App() {
                         },
                         onOpenGallery = {
                             currentScreen = Screen.Gallery
+                        },
+                        onPhotoCaptured = { imageData ->
+                            arViewModel.onPhotoCaptured(imageData)
+                        },
+                        onClearShutterFlash = {
+                            arViewModel.clearShutterFlash()
                         }
                     )
                 }

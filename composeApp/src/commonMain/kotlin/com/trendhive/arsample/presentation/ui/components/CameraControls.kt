@@ -204,11 +204,11 @@ fun CameraControlButton(
 }
 
 /**
- * Complete camera controls bar with photo capture, record button, and gallery access.
+ * Complete camera controls bar with photo capture, record button, and gallery thumbnail.
  * Professional camera-style layout with perfect symmetry using weighted sections.
- * 
- * Layout: [Left Section] --- [Center Record] --- [Right Section]
- * Left:  Gallery button (aligned to end)
+ *
+ * Layout: [Left — Gallery thumbnail] --- [Center — Record] --- [Right — Capture photo]
+ * Left:  Last captured photo as circular thumbnail (or gallery icon if none). Tap → gallery.
  * Center: Large record button (fixed size)
  * Right: Photo capture button (aligned to start)
  */
@@ -218,42 +218,61 @@ fun CameraControlsBar(
     onCapturePhoto: () -> Unit,
     onToggleRecording: () -> Unit,
     onOpenGallery: () -> Unit,
+    lastPhotoData: ByteArray? = null,
+    lastPhotoUri: String? = null,
     modifier: Modifier = Modifier
 ) {
+    // lastPhotoData kept for API compatibility but lastPhotoUri takes precedence
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left section - Gallery button (aligned to end of this section)
+        // Left section - Gallery thumbnail (aligned to end of this section)
         Box(
             modifier = Modifier.weight(1f),
             contentAlignment = Alignment.CenterEnd
         ) {
-            CameraControlButton(
-                onClick = onOpenGallery,
-                enabled = !isRecording,
+            Box(
                 modifier = Modifier
                     .padding(end = 24.dp)
                     .size(56.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, if (isRecording) Color.Gray else Color.White, CircleShape)
+                    .clickable(enabled = !isRecording, onClick = onOpenGallery)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Collections,
-                    contentDescription = "Open Gallery",
-                    tint = if (isRecording) Color.Gray else Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (lastPhotoUri != null) {
+                    // Persistent thumbnail: loaded from file/content URI
+                    PhotoThumbnail(
+                        uri = lastPhotoUri,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Collections,
+                            contentDescription = "Open Gallery",
+                            tint = if (isRecording) Color.Gray else Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
             }
         }
-        
+
         // Center section - Main record button (fixed size, no weight)
         CameraStyleRecordButton(
             isRecording = isRecording,
             onToggleRecording = onToggleRecording,
             modifier = Modifier.size(80.dp)
         )
-        
+
         // Right section - Photo capture button (aligned to start of this section)
         Box(
             modifier = Modifier.weight(1f),

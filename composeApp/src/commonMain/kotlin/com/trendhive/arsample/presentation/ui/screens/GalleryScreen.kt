@@ -294,7 +294,14 @@ private fun MediaGrid(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items(items, key = { it.id }) { item ->
+        // Prefix keys by type — photo and video MediaStore IDs are independent
+        // numeric sequences and can collide when displayed together.
+        items(items, key = { item ->
+            when (item) {
+                is MediaItem.Photo -> "photo_${item.id}"
+                is MediaItem.Video -> "video_${item.id}"
+            }
+        }) { item ->
             MediaGridItem(
                 item = item,
                 onClick = { onItemClick(item) },
