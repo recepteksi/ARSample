@@ -44,9 +44,9 @@ actual fun PhotoThumbnail(uri: String?, modifier: Modifier) {
         }
     }
 
-    if (bitmap != null) {
+    bitmap?.let {
         Image(
-            bitmap = bitmap!!,
+            bitmap = it,
             contentDescription = "Last captured photo",
             contentScale = ContentScale.Crop,
             modifier = modifier
